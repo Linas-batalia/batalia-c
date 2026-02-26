@@ -1,4 +1,4 @@
-app = "batalia-server"
+app = "batalia-c"
 primary_region = "waw"
 
 [build]
