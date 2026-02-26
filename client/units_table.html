@@ -1,0 +1,1580 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Batalia - Units and Features</title>
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&display=swap" rel="stylesheet">
+    <style>
+        * {
+            box-sizing: border-box;
+        }
+        body {
+            margin: 0;
+            padding: 20px;
+            background: linear-gradient(135deg, #3d2914 0%, #5c3d1e 50%, #3d2914 100%);
+            font-family: 'Cinzel', serif;
+            min-height: 100vh;
+        }
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+        h1 {
+            text-align: center;
+            color: #d4a857;
+            font-size: 2.5rem;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
+            margin-bottom: 10px;
+            letter-spacing: 4px;
+        }
+        .subtitle {
+            text-align: center;
+            color: #a89070;
+            font-style: italic;
+            margin-bottom: 20px;
+        }
+
+        /* Tab navigation */
+        .tab-nav {
+            display: flex;
+            gap: 4px;
+            margin-bottom: 0;
+            justify-content: center;
+        }
+        .tab-btn {
+            padding: 14px 30px;
+            font-family: 'Cinzel', serif;
+            font-size: 1rem;
+            font-weight: 700;
+            border: 2px solid #8b6914;
+            border-bottom: none;
+            border-radius: 8px 8px 0 0;
+            cursor: pointer;
+            transition: all 0.2s;
+            background: linear-gradient(180deg, #5c3d1e 0%, #4a3018 100%);
+            color: #a89070;
+            letter-spacing: 2px;
+        }
+        .tab-btn:hover {
+            background: linear-gradient(180deg, #6b4a28 0%, #5c3d1e 100%);
+            color: #d4a857;
+        }
+        .tab-btn.active {
+            background: linear-gradient(135deg, #c9b896 0%, #e8d5b7 50%, #d4c4a8 100%);
+            color: #3d2914;
+            border-color: #8b6914;
+        }
+        .tab-content {
+            display: none;
+        }
+        .tab-content.active {
+            display: block;
+        }
+
+        .toolbar {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 15px;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+        .toolbar button {
+            padding: 10px 20px;
+            font-family: 'Cinzel', serif;
+            font-size: 0.9rem;
+            font-weight: 600;
+            border: 2px solid #8b6914;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .btn-primary {
+            background: linear-gradient(180deg, #8b6914 0%, #6b5a3a 100%);
+            color: #f5e6c8;
+        }
+        .btn-primary:hover {
+            background: linear-gradient(180deg, #a87b1a 0%, #8b6914 100%);
+        }
+        .btn-secondary {
+            background: linear-gradient(180deg, #5c5c8b 0%, #3d3d6b 100%);
+            color: #f5e6c8;
+            border-color: #5c5c8b;
+        }
+        .btn-secondary:hover {
+            background: linear-gradient(180deg, #7070a0 0%, #5c5c8b 100%);
+        }
+        .btn-danger {
+            background: linear-gradient(180deg, #8b4444 0%, #6b2222 100%);
+            color: #f5e6c8;
+            border-color: #8b4444;
+        }
+        .btn-danger:hover {
+            background: linear-gradient(180deg, #a05050 0%, #8b4444 100%);
+        }
+        .btn-success {
+            background: linear-gradient(180deg, #4a6b4a 0%, #3d5a3d 100%);
+            color: #f5e6c8;
+            border-color: #4a6b4a;
+        }
+        .btn-success:hover {
+            background: linear-gradient(180deg, #5a7b5a 0%, #4a6b4a 100%);
+        }
+        .table-container {
+            background: linear-gradient(135deg, #c9b896 0%, #e8d5b7 30%, #f0e4cc 50%, #e8d5b7 70%, #d4c4a8 100%);
+            border: 3px solid #8b6914;
+            border-radius: 0 0 12px 12px;
+            padding: 20px;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.4);
+            overflow-x: auto;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.9rem;
+        }
+        th, td {
+            padding: 10px 12px;
+            text-align: center;
+            border: 1px solid #a89070;
+            vertical-align: middle;
+        }
+        th {
+            background: linear-gradient(180deg, #8b6914 0%, #6b5a3a 100%);
+            color: #f5e6c8;
+            font-weight: 700;
+            font-size: 0.85rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+        tr:nth-child(even) {
+            background: rgba(255, 255, 255, 0.3);
+        }
+        tr:nth-child(odd) {
+            background: rgba(255, 255, 255, 0.15);
+        }
+        tr:hover:not(.section-header) {
+            background: rgba(212, 168, 87, 0.3);
+        }
+        tr.existing-unit {
+            background: rgba(139, 105, 20, 0.2);
+        }
+        tr.existing-unit:hover {
+            background: rgba(139, 105, 20, 0.35);
+        }
+        td {
+            color: #3d2914;
+        }
+        td[contenteditable="true"] {
+            cursor: text;
+            transition: background 0.2s;
+        }
+        td[contenteditable="true"]:hover {
+            background: rgba(255, 255, 255, 0.4);
+        }
+        td[contenteditable="true"]:focus {
+            background: rgba(255, 255, 255, 0.6);
+            outline: 2px solid #8b6914;
+            outline-offset: -2px;
+        }
+        td:first-child {
+            font-weight: 600;
+            text-align: left;
+        }
+        .icon {
+            font-size: 1.2rem;
+            margin-right: 6px;
+        }
+        .special {
+            font-size: 0.8rem;
+            color: #5c3d1e;
+            text-align: left;
+        }
+        .new-unit td {
+            color: #6b5a3a;
+        }
+        .section-header {
+            background: linear-gradient(180deg, #5c3d1e 0%, #4a3018 100%) !important;
+            color: #d4a857 !important;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+        }
+        .section-header td {
+            color: #d4a857;
+            padding: 12px;
+            font-size: 0.95rem;
+        }
+        tr.deleted {
+            background: rgba(139, 68, 68, 0.2) !important;
+        }
+        tr.deleted td {
+            text-decoration: line-through;
+            color: #8b6666 !important;
+            opacity: 0.7;
+        }
+        tr.deleted:hover {
+            background: rgba(139, 68, 68, 0.3) !important;
+        }
+        .delete-toggle {
+            width: 24px;
+            height: 24px;
+            border: 2px solid #8b6914;
+            border-radius: 4px;
+            background: #f5e6c8;
+            cursor: pointer;
+            font-size: 14px;
+            line-height: 20px;
+            text-align: center;
+            margin-right: 8px;
+            display: inline-block;
+            vertical-align: middle;
+            transition: all 0.2s;
+        }
+        .delete-toggle:hover {
+            background: #e8d5b7;
+            border-color: #6b5a3a;
+        }
+        tr.deleted .delete-toggle {
+            background: #d4a8a8;
+            border-color: #8b4444;
+        }
+        .notes {
+            margin-top: 20px;
+            padding: 15px;
+            background: rgba(0,0,0,0.1);
+            border-radius: 8px;
+            color: #3d2914;
+            font-size: 0.85rem;
+        }
+        .notes h3 {
+            margin: 0 0 10px 0;
+            color: #6b4a14;
+        }
+        .notes ul {
+            margin: 0;
+            padding-left: 20px;
+        }
+        .notes li {
+            margin: 5px 0;
+        }
+        .damage-formula {
+            font-size: 0.75rem;
+            color: #d4c4a8;
+        }
+        .stats-summary {
+            margin-top: 15px;
+            padding: 10px 15px;
+            background: rgba(139, 105, 20, 0.15);
+            border-radius: 6px;
+            text-align: center;
+            color: #5c3d1e;
+            font-size: 0.85rem;
+        }
+        .help-text {
+            text-align: center;
+            color: #a89070;
+            font-size: 0.8rem;
+            margin-bottom: 15px;
+            font-style: italic;
+        }
+
+        /* Feature category tags */
+        .feat-cat {
+            display: inline-block;
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-size: 0.7rem;
+            font-weight: 700;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+        }
+        .cat-offense { background: rgba(139, 68, 68, 0.25); color: #8b4444; border: 1px solid #8b4444; }
+        .cat-defense { background: rgba(92, 92, 139, 0.25); color: #5c5c8b; border: 1px solid #5c5c8b; }
+        .cat-support { background: rgba(74, 107, 74, 0.25); color: #4a6b4a; border: 1px solid #4a6b4a; }
+        .cat-mobility { background: rgba(139, 105, 20, 0.25); color: #8b6914; border: 1px solid #8b6914; }
+        .cat-special { background: rgba(106, 58, 120, 0.25); color: #6a3a78; border: 1px solid #6a3a78; }
+
+        /* Assigned Features */
+        .assigned-features-container {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+            align-items: center;
+        }
+        .feature-tag {
+            display: flex;
+            align-items: center;
+            background: #d4a857;
+            color: #3d2914;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            border: 1px solid #8b6914;
+        }
+        .feature-tag .remove-feat {
+            margin-left: 6px;
+            cursor: pointer;
+            font-weight: 900;
+            color: #8b4444;
+            padding: 0 2px;
+            border-radius: 50%;
+        }
+        .feature-tag .remove-feat:hover {
+            background: #8b4444;
+            color: white;
+        }
+        .add-feature-btn {
+            padding: 4px 10px;
+            font-size: 0.8rem;
+            background: #8b6914;
+            color: white;
+            border: 1px solid #6b5a3a;
+            border-radius: 4px;
+            cursor: pointer;
+            margin-top: 4px;
+        }
+        .add-feature-btn:hover {
+            background: #a87b1a;
+        }
+        .feature-dropdown {
+            display: block;
+            margin-top: 4px;
+            padding: 4px;
+            font-size: 0.8rem;
+            border: 1px solid #8b6914;
+            border-radius: 4px;
+            background: #f5e6c8;
+            color: #3d2914;
+            max-width: 180px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>&#9876; BATALIA &#9876;</h1>
+        <p class="subtitle">Units and Features</p>
+        <p class="help-text">&#128161; Click on a cell to edit. Click &#9744; to mark a row for deletion.</p>
+
+        <!-- TAB NAVIGATION -->
+        <div class="tab-nav">
+            <button class="tab-btn active" onclick="switchTab('units')">&#9876; Units</button>
+            <button class="tab-btn" onclick="switchTab('features')">&#10024; Features</button>
+            <button class="tab-btn" onclick="switchTab('terrain')">&#127966; Terrain</button>
+        </div>
+
+        <!-- ===================== UNITS TAB ===================== -->
+        <div id="tab-units" class="tab-content active">
+            <div class="table-container">
+                <div class="toolbar">
+                    <button class="btn-success" onclick="addNewUnitRow()">&#10133; Add Unit</button>
+                    <button class="btn-primary" onclick="exportToJSON('units')">&#128229; Export JSON</button>
+                    <button class="btn-secondary" onclick="saveToLocalStorage('units')">&#128190; Save</button>
+                    <button class="btn-secondary" onclick="loadFromLocalStorage('units')">&#128194; Load</button>
+                    <button class="btn-danger" onclick="clearDeleted('unitsTableBody')">&#128465; Remove Deleted</button>
+                    <button class="btn-danger" onclick="resetToDefaults('units')">&#128260; Reset Defaults</button>
+                </div>
+
+                <table id="unitsTable">
+                    <thead>
+                        <tr>
+                            <th style="width: 12%;">Unit</th>
+                            <th style="width: 4%;">HP</th>
+                            <th style="width: 4%;">AP</th>
+                            <th style="width: 8%;">Melee<br><span class="damage-formula">(atk+counter)</span></th>
+                            <th style="width: 8%;">Ranged<br><span class="damage-formula">(dmg, range)</span></th>
+                            <th style="width: 12%;">Created From<br><span class="damage-formula">(+item)</span></th>
+                            <th style="width: 20%;">Description</th>
+                            <th style="width: 32%;">Assigned Features</th>
+                        </tr>
+                    </thead>
+                    <tbody id="unitsTableBody">
+                        <!-- EXISTING UNITS -->
+                        <tr class="section-header">
+                            <td colspan="8">&#128220; Existing Units</td>
+                        </tr>
+                        <tr class="existing-unit" data-unit="general">
+                            <td><span class="delete-toggle" onclick="toggleDelete(this)">&#9744;</span><span class="icon">&#128081;</span><span contenteditable="true">General</span></td>
+                            <td contenteditable="true">10</td>
+                            <td contenteditable="true">3</td>
+                            <td contenteditable="true">1+1</td>
+                            <td contenteditable="true">-</td>
+                            <td contenteditable="true">-</td>
+                            <td class="special" contenteditable="true"><b>Leader</b> - if killed, the game ends. Charge bonus on first strike.</td>
+                            <td class="assigned-features-cell">
+                                <div class="assigned-features-container">
+                                    <div class="feature-tag"><span>Charge</span><span class="remove-feat" onclick="this.parentElement.remove()">&times;</span></div>
+                                </div>
+                                <button class="add-feature-btn" onclick="showFeatureDropdown(this)">+ Feature</button>
+                            </td>
+                        </tr>
+                        <tr class="existing-unit" data-unit="knight">
+                            <td><span class="delete-toggle" onclick="toggleDelete(this)">&#9744;</span><span class="icon">&#9822;</span><span contenteditable="true">Knight</span></td>
+                            <td contenteditable="true">8</td>
+                            <td contenteditable="true">3</td>
+                            <td contenteditable="true">1+1</td>
+                            <td contenteditable="true">-</td>
+                            <td contenteditable="true">-</td>
+                            <td class="special" contenteditable="true">Heavily armored. Charge bonus on first strike.</td>
+                            <td class="assigned-features-cell">
+                                <div class="assigned-features-container">
+                                    <div class="feature-tag"><span>Charge</span><span class="remove-feat" onclick="this.parentElement.remove()">&times;</span></div>
+                                </div>
+                                <button class="add-feature-btn" onclick="showFeatureDropdown(this)">+ Feature</button>
+                            </td>
+                        </tr>
+                        <tr class="existing-unit" data-unit="shieldman">
+                            <td><span class="delete-toggle" onclick="toggleDelete(this)">&#9744;</span><span class="icon">&#128737;&#65039;</span><span contenteditable="true">Shieldman</span></td>
+                            <td contenteditable="true">6</td>
+                            <td contenteditable="true">2</td>
+                            <td contenteditable="true">1+1</td>
+                            <td contenteditable="true">-</td>
+                            <td contenteditable="true">-</td>
+                            <td class="special" contenteditable="true"><b>Defensive</b> - blocks enemy movement. <b>Regroup</b>: +1 HP (max 3 uses). <b>Shield</b>: blocks first arrow from each archer.</td>
+                            <td class="assigned-features-cell">
+                                <div class="assigned-features-container">
+                                    <div class="feature-tag"><span>Castle</span><span class="remove-feat" onclick="this.parentElement.remove()">&times;</span></div>
+                                    <div class="feature-tag"><span>Regroup</span><span class="remove-feat" onclick="this.parentElement.remove()">&times;</span></div>
+                                    <div class="feature-tag"><span>Shield</span><span class="remove-feat" onclick="this.parentElement.remove()">&times;</span></div>
+                                </div>
+                                <button class="add-feature-btn" onclick="showFeatureDropdown(this)">+ Feature</button>
+                            </td>
+                        </tr>
+                        <tr class="existing-unit" data-unit="archer">
+                            <td><span class="delete-toggle" onclick="toggleDelete(this)">&#9744;</span><span class="icon">&#127993;</span><span contenteditable="true">Longbowman</span></td>
+                            <td contenteditable="true">5</td>
+                            <td contenteditable="true">2</td>
+                            <td contenteditable="true">-</td>
+                            <td contenteditable="true">1-2, 3hex</td>
+                            <td contenteditable="true">-</td>
+                            <td class="special" contenteditable="true"><b>Ranged</b> - shoots at 3 hex range. Cannot melee.</td>
+                            <td class="assigned-features-cell">
+                                <div class="assigned-features-container"></div>
+                                <button class="add-feature-btn" onclick="showFeatureDropdown(this)">+ Feature</button>
+                            </td>
+                        </tr>
+
+                        <!-- SUGGESTED UNITS -->
+                        <tr class="section-header">
+                            <td colspan="8">&#9876; Suggested Units</td>
+                        </tr>
+                        <tr class="new-unit" data-unit="warrior">
+                            <td><span class="delete-toggle" onclick="toggleDelete(this)">&#9744;</span><span class="icon">&#9939;</span><span contenteditable="true">Warrior</span></td>
+                            <td contenteditable="true">5</td>
+                            <td contenteditable="true">2</td>
+                            <td contenteditable="true">1+1</td>
+                            <td contenteditable="true">-</td>
+                            <td contenteditable="true">-</td>
+                            <td class="special" contenteditable="true">Base unit with club.</td>
+                            <td class="assigned-features-cell">
+                                <div class="assigned-features-container">
+                                    <div class="feature-tag"><span>Castle</span><span class="remove-feat" onclick="this.parentElement.remove()">&times;</span></div>
+                                </div>
+                                <button class="add-feature-btn" onclick="showFeatureDropdown(this)">+ Feature</button>
+                            </td>
+                        </tr>
+                        <tr class="new-unit" data-unit="swordsman">
+                            <td><span class="delete-toggle" onclick="toggleDelete(this)">&#9744;</span><span class="icon">&#128481;&#65039;</span><span contenteditable="true">Swordsman</span></td>
+                            <td contenteditable="true">7</td>
+                            <td contenteditable="true">3</td>
+                            <td contenteditable="true">2+1</td>
+                            <td contenteditable="true">-</td>
+                            <td contenteditable="true">Warrior +sword</td>
+                            <td class="special" contenteditable="true">Versatile fighter. Balanced attack/defense.</td>
+                            <td class="assigned-features-cell">
+                                <div class="assigned-features-container">
+                                    <div class="feature-tag"><span>Riposte</span><span class="remove-feat" onclick="this.parentElement.remove()">&times;</span></div>
+                                    <div class="feature-tag"><span>Castle</span><span class="remove-feat" onclick="this.parentElement.remove()">&times;</span></div>
+                                </div>
+                                <button class="add-feature-btn" onclick="showFeatureDropdown(this)">+ Feature</button>
+                            </td>
+                        </tr>
+                        <tr class="new-unit" data-unit="axeman">
+                            <td><span class="delete-toggle" onclick="toggleDelete(this)">&#9744;</span><span class="icon">&#129683;</span><span contenteditable="true">Axeman</span></td>
+                            <td contenteditable="true">7</td>
+                            <td contenteditable="true">2</td>
+                            <td contenteditable="true">3+1</td>
+                            <td contenteditable="true">-</td>
+                            <td contenteditable="true">Warrior +axe</td>
+                            <td class="special" contenteditable="true">Strong close combat specialist.</td>
+                            <td class="assigned-features-cell">
+                                <div class="assigned-features-container">
+                                    <div class="feature-tag"><span>Smash</span><span class="remove-feat" onclick="this.parentElement.remove()">&times;</span></div>
+                                    <div class="feature-tag"><span>Castle</span><span class="remove-feat" onclick="this.parentElement.remove()">&times;</span></div>
+                                </div>
+                                <button class="add-feature-btn" onclick="showFeatureDropdown(this)">+ Feature</button>
+                            </td>
+                        </tr>
+                        <tr class="new-unit" data-unit="pikeman">
+                            <td><span class="delete-toggle" onclick="toggleDelete(this)">&#9744;</span><span class="icon">&#128681;</span><span contenteditable="true">Pikeman</span></td>
+                            <td contenteditable="true">5</td>
+                            <td contenteditable="true">2</td>
+                            <td contenteditable="true">1+2</td>
+                            <td contenteditable="true">-</td>
+                            <td contenteditable="true">Spearman +pike</td>
+                            <td class="special" contenteditable="true">Anti-cavalry unit. Strong counter-attack.</td>
+                            <td class="assigned-features-cell">
+                                <div class="assigned-features-container">
+                                    <div class="feature-tag"><span>Brace</span><span class="remove-feat" onclick="this.parentElement.remove()">&times;</span></div>
+                                    <div class="feature-tag"><span>Castle</span><span class="remove-feat" onclick="this.parentElement.remove()">&times;</span></div>
+                                </div>
+                                <button class="add-feature-btn" onclick="showFeatureDropdown(this)">+ Feature</button>
+                            </td>
+                        </tr>
+                        <tr class="new-unit" data-unit="bowman">
+                            <td><span class="delete-toggle" onclick="toggleDelete(this)">&#9744;</span><span class="icon">&#127993;</span><span contenteditable="true">Bowman</span></td>
+                            <td contenteditable="true">4</td>
+                            <td contenteditable="true">2</td>
+                            <td contenteditable="true">-</td>
+                            <td contenteditable="true">1, 2hex</td>
+                            <td contenteditable="true">Warrior +bow</td>
+                            <td class="special" contenteditable="true">Short-range archer, 2 hex range.</td>
+                            <td class="assigned-features-cell">
+                                <div class="assigned-features-container"></div>
+                                <button class="add-feature-btn" onclick="showFeatureDropdown(this)">+ Feature</button>
+                            </td>
+                        </tr>
+                        <tr class="new-unit" data-unit="short_archer">
+                            <td><span class="delete-toggle" onclick="toggleDelete(this)">&#9744;</span><span class="icon">&#127919;</span><span contenteditable="true">Archer</span></td>
+                            <td contenteditable="true">5</td>
+                            <td contenteditable="true">2</td>
+                            <td contenteditable="true">-</td>
+                            <td contenteditable="true">1-2, 2hex</td>
+                            <td contenteditable="true">Bowman +longbow</td>
+                            <td class="special" contenteditable="true">Medium-range archer, 2 hex range.</td>
+                            <td class="assigned-features-cell">
+                                <div class="assigned-features-container"></div>
+                                <button class="add-feature-btn" onclick="showFeatureDropdown(this)">+ Feature</button>
+                            </td>
+                        </tr>
+                        <tr class="new-unit" data-unit="spearman">
+                            <td><span class="delete-toggle" onclick="toggleDelete(this)">&#9744;</span><span class="icon">&#128305;</span><span contenteditable="true">Spearman</span></td>
+                            <td contenteditable="true">6</td>
+                            <td contenteditable="true">2</td>
+                            <td contenteditable="true">1+1</td>
+                            <td contenteditable="true">-</td>
+                            <td contenteditable="true">Warrior +spear</td>
+                            <td class="special" contenteditable="true">Anti-cavalry, reach attacks.</td>
+                            <td class="assigned-features-cell">
+                                <div class="assigned-features-container">
+                                    <div class="feature-tag"><span>Castle</span><span class="remove-feat" onclick="this.parentElement.remove()">&times;</span></div>
+                                </div>
+                                <button class="add-feature-btn" onclick="showFeatureDropdown(this)">+ Feature</button>
+                            </td>
+                        </tr>
+                        <tr class="new-unit" data-unit="phalanx">
+                            <td><span class="delete-toggle" onclick="toggleDelete(this)">&#9744;</span><span class="icon">&#128737;&#65039;</span><span contenteditable="true">Phalanx</span></td>
+                            <td contenteditable="true">7</td>
+                            <td contenteditable="true">2</td>
+                            <td contenteditable="true">1+1</td>
+                            <td contenteditable="true">-</td>
+                            <td contenteditable="true">Spearman +shield</td>
+                            <td class="special" contenteditable="true">Heavy defensive formation unit.</td>
+                            <td class="assigned-features-cell">
+                                <div class="assigned-features-container">
+                                    <div class="feature-tag"><span>Castle</span><span class="remove-feat" onclick="this.parentElement.remove()">&times;</span></div>
+                                </div>
+                                <button class="add-feature-btn" onclick="showFeatureDropdown(this)">+ Feature</button>
+                            </td>
+                        </tr>
+                        <tr class="new-unit" data-unit="elephant">
+                            <td><span class="delete-toggle" onclick="toggleDelete(this)">&#9744;</span><span class="icon">&#128024;</span><span contenteditable="true">Elephant</span></td>
+                            <td contenteditable="true">12</td>
+                            <td contenteditable="true">2</td>
+                            <td contenteditable="true">3+0</td>
+                            <td contenteditable="true">-</td>
+                            <td contenteditable="true">Warrior +elephant</td>
+                            <td class="special" contenteditable="true">Massive war beast, high HP.</td>
+                            <td class="assigned-features-cell">
+                                <div class="assigned-features-container"></div>
+                                <button class="add-feature-btn" onclick="showFeatureDropdown(this)">+ Feature</button>
+                            </td>
+                        </tr>
+                        <tr class="new-unit" data-unit="cavalry">
+                            <td><span class="delete-toggle" onclick="toggleDelete(this)">&#9744;</span><span class="icon">&#128052;</span><span contenteditable="true">Light Cavalry</span></td>
+                            <td contenteditable="true">6</td>
+                            <td contenteditable="true">4</td>
+                            <td contenteditable="true">1+1</td>
+                            <td contenteditable="true">-</td>
+                            <td contenteditable="true">Warrior +horse</td>
+                            <td class="special" contenteditable="true">Fast scouting unit. 4 AP for movement.</td>
+                            <td class="assigned-features-cell">
+                                <div class="assigned-features-container">
+                                    <div class="feature-tag"><span>Swift</span><span class="remove-feat" onclick="this.parentElement.remove()">&times;</span></div>
+                                </div>
+                                <button class="add-feature-btn" onclick="showFeatureDropdown(this)">+ Feature</button>
+                            </td>
+                        </tr>
+                        <tr class="new-unit" data-unit="heavy_cavalry">
+                            <td><span class="delete-toggle" onclick="toggleDelete(this)">&#9744;</span><span class="icon">&#127943;</span><span contenteditable="true">Heavy Cavalry</span></td>
+                            <td contenteditable="true">9</td>
+                            <td contenteditable="true">3</td>
+                            <td contenteditable="true">3+1</td>
+                            <td contenteditable="true">-</td>
+                            <td contenteditable="true">Cavalry +armor</td>
+                            <td class="special" contenteditable="true">Heavily armored rider. Strong attack.</td>
+                            <td class="assigned-features-cell">
+                                <div class="assigned-features-container">
+                                    <div class="feature-tag"><span>Charge</span><span class="remove-feat" onclick="this.parentElement.remove()">&times;</span></div>
+                                    <div class="feature-tag"><span>Trample</span><span class="remove-feat" onclick="this.parentElement.remove()">&times;</span></div>
+                                </div>
+                                <button class="add-feature-btn" onclick="showFeatureDropdown(this)">+ Feature</button>
+                            </td>
+                        </tr>
+                        <tr class="new-unit" data-unit="crossbow">
+                            <td><span class="delete-toggle" onclick="toggleDelete(this)">&#9744;</span><span class="icon">&#127919;</span><span contenteditable="true">Crossbowman</span></td>
+                            <td contenteditable="true">5</td>
+                            <td contenteditable="true">2</td>
+                            <td contenteditable="true">-</td>
+                            <td contenteditable="true">2, 4hex</td>
+                            <td contenteditable="true">Bowman +crossbow</td>
+                            <td class="special" contenteditable="true">Stronger shot, longer range (4 hex).</td>
+                            <td class="assigned-features-cell">
+                                <div class="assigned-features-container">
+                                    <div class="feature-tag"><span>Piercing</span><span class="remove-feat" onclick="this.parentElement.remove()">&times;</span></div>
+                                </div>
+                                <button class="add-feature-btn" onclick="showFeatureDropdown(this)">+ Feature</button>
+                            </td>
+                        </tr>
+                        <tr class="new-unit" data-unit="berserker">
+                            <td><span class="delete-toggle" onclick="toggleDelete(this)">&#9744;</span><span class="icon">&#9889;</span><span contenteditable="true">Berserker</span></td>
+                            <td contenteditable="true">6</td>
+                            <td contenteditable="true">3</td>
+                            <td contenteditable="true">2+1</td>
+                            <td contenteditable="true">-</td>
+                            <td contenteditable="true">Axeman +rage</td>
+                            <td class="special" contenteditable="true">The more wounded, the more dangerous.</td>
+                            <td class="assigned-features-cell">
+                                <div class="assigned-features-container">
+                                    <div class="feature-tag"><span>Rage</span><span class="remove-feat" onclick="this.parentElement.remove()">&times;</span></div>
+                                    <div class="feature-tag"><span>Castle</span><span class="remove-feat" onclick="this.parentElement.remove()">&times;</span></div>
+                                </div>
+                                <button class="add-feature-btn" onclick="showFeatureDropdown(this)">+ Feature</button>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+                <div class="stats-summary" id="unitStatsSummary">
+                    Total units: <span id="totalUnits">0</span> | Active: <span id="activeUnits">0</span> | Deleted: <span id="deletedUnits">0</span>
+                </div>
+                <div class="notes">
+                    <h3>&#128203; Notes</h3>
+                    <ul>
+                        <li><b>HP</b> - hit points. When it reaches 0, the unit dies.</li>
+                        <li><b>AP</b> - action points. Used for movement and actions.</li>
+                        <li><b>Melee (atk+counter)</b> - attack damage + counter-attack damage. "-" = cannot melee.</li>
+                        <li><b>Ranged (dmg, range)</b> - shot damage and range in hexes. "1-2" = 1 normal, 2 on backstab. "-" = cannot shoot.</li>
+                        <li><b>Created From</b> - defines unit progression tree. Format: "BaseUnit +item". "-" = base/starting unit.</li>
+                        <li><b>Assigned Features</b> - features the unit has from the start. Click "+" to add.</li>
+                        <li>If a unit has <b>Ranged</b> data, it acts as an archer (can shoot). If it has <b>Melee</b> data, it can melee attack.</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <!-- ===================== FEATURES TAB ===================== -->
+        <div id="tab-features" class="tab-content">
+            <div class="table-container">
+                <div class="toolbar">
+                    <button class="btn-success" onclick="addNewFeatureRow()">&#10133; Add Feature</button>
+                    <button class="btn-primary" onclick="exportToJSON('features')">&#128229; Export JSON</button>
+                    <button class="btn-secondary" onclick="saveToLocalStorage('features')">&#128190; Save</button>
+                    <button class="btn-secondary" onclick="loadFromLocalStorage('features')">&#128194; Load</button>
+                    <button class="btn-danger" onclick="clearDeleted('featuresTableBody')">&#128465; Remove Deleted</button>
+                    <button class="btn-danger" onclick="resetToDefaults('features')">&#128260; Reset Defaults</button>
+                </div>
+                <table id="featuresTable">
+                    <thead>
+                        <tr>
+                            <th style="width: 14%;">Feature</th>
+                            <th style="width: 8%;">Category</th>
+                            <th style="width: 38%;">Description</th>
+                            <th style="width: 20%;">Who can acquire</th>
+                            <th style="width: 20%;">Progression condition</th>
+                        </tr>
+                    </thead>
+                    <tbody id="featuresTableBody">
+                        <!-- OFFENSE -->
+                        <tr class="section-header"><td colspan="5">&#9876; Offense Features</td></tr>
+                        <tr>
+                            <td><span class="delete-toggle" onclick="toggleDelete(this)">&#9744;</span><span class="icon">&#9889;</span><span contenteditable="true">Charge</span></td>
+                            <td><span class="feat-cat cat-offense">Offense</span></td>
+                            <td class="special" contenteditable="true">+1 damage to first strike in each combat.</td>
+                            <td class="special" contenteditable="true">General, Knight, Heavy Cavalry, Swordsman</td>
+                            <td class="special" contenteditable="true">Kill 2 enemies in one battle.</td>
+                        </tr>
+                        <tr>
+                            <td><span class="delete-toggle" onclick="toggleDelete(this)">&#9744;</span><span class="icon">&#128165;</span><span contenteditable="true">Rage</span></td>
+                            <td><span class="feat-cat cat-offense">Offense</span></td>
+                            <td class="special" contenteditable="true">+1 damage when HP &#8804; 50% of max HP.</td>
+                            <td class="special" contenteditable="true">Berserker, Axeman, Knight</td>
+                            <td class="special" contenteditable="true">Survive combat with &#8804; 2 HP.</td>
+                        </tr>
+                        <tr>
+                            <td><span class="delete-toggle" onclick="toggleDelete(this)">&#9744;</span><span class="icon">&#128481;&#65039;</span><span contenteditable="true">Riposte</span></td>
+                            <td><span class="feat-cat cat-offense">Offense</span></td>
+                            <td class="special" contenteditable="true">Counter-attack deals 2 damage instead of 1.</td>
+                            <td class="special" contenteditable="true">Swordsman, Knight, General</td>
+                            <td class="special" contenteditable="true">Successfully perform 3 counter-attacks.</td>
+                        </tr>
+                        <tr>
+                            <td><span class="delete-toggle" onclick="toggleDelete(this)">&#9744;</span><span class="icon">&#129683;</span><span contenteditable="true">Smash</span></td>
+                            <td><span class="feat-cat cat-offense">Offense</span></td>
+                            <td class="special" contenteditable="true">+1 damage against shieldmen and armored enemies.</td>
+                            <td class="special" contenteditable="true">Axeman, Berserker</td>
+                            <td class="special" contenteditable="true">Kill 2 shieldmen.</td>
+                        </tr>
+                        <tr>
+                            <td><span class="delete-toggle" onclick="toggleDelete(this)">&#9744;</span><span class="icon">&#128064;</span><span contenteditable="true">Backstab Mastery</span></td>
+                            <td><span class="feat-cat cat-offense">Offense</span></td>
+                            <td class="special" contenteditable="true">Backstab damage +2 instead of +1.</td>
+                            <td class="special" contenteditable="true">Light Cavalry, Swordsman</td>
+                            <td class="special" contenteditable="true">Perform 3 successful backstab attacks.</td>
+                        </tr>
+                        <tr>
+                            <td><span class="delete-toggle" onclick="toggleDelete(this)">&#9744;</span><span class="icon">&#128168;</span><span contenteditable="true">Crush</span></td>
+                            <td><span class="feat-cat cat-offense">Offense</span></td>
+                            <td class="special" contenteditable="true">Attack pushes enemy 1 hex back.</td>
+                            <td class="special" contenteditable="true">Heavy Cavalry, Axeman</td>
+                            <td class="special" contenteditable="true">Kill 3 enemies in melee.</td>
+                        </tr>
+                        <tr>
+                            <td><span class="delete-toggle" onclick="toggleDelete(this)">&#9744;</span><span class="icon">&#127993;</span><span contenteditable="true">Piercing</span></td>
+                            <td><span class="feat-cat cat-offense">Offense</span></td>
+                            <td class="special" contenteditable="true">Shots ignore 1 defense bonus.</td>
+                            <td class="special" contenteditable="true">Crossbowman, Longbowman</td>
+                            <td class="special" contenteditable="true">Land 5 shots.</td>
+                        </tr>
+
+                        <!-- DEFENSE -->
+                        <tr class="section-header"><td colspan="5">&#128737; Defense Features</td></tr>
+                        <tr>
+                            <td><span class="delete-toggle" onclick="toggleDelete(this)">&#9744;</span><span class="icon">&#129506;</span><span contenteditable="true">Parry</span></td>
+                            <td><span class="feat-cat cat-defense">Defense</span></td>
+                            <td class="special" contenteditable="true">50% chance to avoid counter-attack damage.</td>
+                            <td class="special" contenteditable="true">Swordsman, Knight, General</td>
+                            <td class="special" contenteditable="true">Survive 5 combats.</td>
+                        </tr>
+                        <tr>
+                            <td><span class="delete-toggle" onclick="toggleDelete(this)">&#9744;</span><span class="icon">&#128736;</span><span contenteditable="true">Testudo</span></td>
+                            <td><span class="feat-cat cat-defense">Defense</span></td>
+                            <td class="special" contenteditable="true">Adjacent friendly units take -1 damage from shots.</td>
+                            <td class="special" contenteditable="true">Shieldman</td>
+                            <td class="special" contenteditable="true">Absorb 8 damage points.</td>
+                        </tr>
+                        <tr>
+                            <td><span class="delete-toggle" onclick="toggleDelete(this)">&#9744;</span><span class="icon">&#127984;</span><span contenteditable="true">Immovable</span></td>
+                            <td><span class="feat-cat cat-defense">Defense</span></td>
+                            <td class="special" contenteditable="true">Cannot be pushed. Backstab deals no extra damage.</td>
+                            <td class="special" contenteditable="true">Shieldman, Pikeman</td>
+                            <td class="special" contenteditable="true">Block 3 enemy attacks in a row.</td>
+                        </tr>
+                        <tr>
+                            <td><span class="delete-toggle" onclick="toggleDelete(this)">&#9744;</span><span class="icon">&#128170;</span><span contenteditable="true">Brace</span></td>
+                            <td><span class="feat-cat cat-defense">Defense</span></td>
+                            <td class="special" contenteditable="true">Counter-attack deals 2 damage against riders and generals.</td>
+                            <td class="special" contenteditable="true">Pikeman, Shieldman</td>
+                            <td class="special" contenteditable="true">Repel 2 cavalry attacks.</td>
+                        </tr>
+                        <tr>
+                            <td><span class="delete-toggle" onclick="toggleDelete(this)">&#9744;</span><span class="icon">&#128296;</span><span contenteditable="true">Regroup</span></td>
+                            <td><span class="feat-cat cat-defense">Defense</span></td>
+                            <td class="special" contenteditable="true">Heal +1 HP (1 AP). Max 3 uses per game. Cannot exceed max HP.</td>
+                            <td class="special" contenteditable="true">Shieldman</td>
+                            <td class="special" contenteditable="true">Starting ability.</td>
+                        </tr>
+                        <tr>
+                            <td><span class="delete-toggle" onclick="toggleDelete(this)">&#9744;</span><span class="icon">&#128737;</span><span contenteditable="true">Shield</span></td>
+                            <td><span class="feat-cat cat-defense">Defense</span></td>
+                            <td class="special" contenteditable="true">Block first arrow from each archer (1 AP). Second arrow hits. Lasts until next turn.</td>
+                            <td class="special" contenteditable="true">Shieldman</td>
+                            <td class="special" contenteditable="true">Starting ability.</td>
+                        </tr>
+
+                        <!-- SUPPORT -->
+                        <tr class="section-header"><td colspan="5">&#128154; Support Features</td></tr>
+                        <tr>
+                            <td><span class="delete-toggle" onclick="toggleDelete(this)">&#9744;</span><span class="icon">&#128154;</span><span contenteditable="true">Heal</span></td>
+                            <td><span class="feat-cat cat-support">Support</span></td>
+                            <td class="special" contenteditable="true">Restore 2 HP to a friendly unit (1 AP, 1 hex range).</td>
+                            <td class="special" contenteditable="true">General</td>
+                            <td class="special" contenteditable="true">General: have 3+ units adjacent.</td>
+                        </tr>
+                        <tr>
+                            <td><span class="delete-toggle" onclick="toggleDelete(this)">&#9744;</span><span class="icon">&#128244;</span><span contenteditable="true">Rally</span></td>
+                            <td><span class="feat-cat cat-support">Support</span></td>
+                            <td class="special" contenteditable="true">Adjacent friendly units gain +1 AP at turn start.</td>
+                            <td class="special" contenteditable="true">General</td>
+                            <td class="special" contenteditable="true">Survive 3 rounds with 2+ units adjacent.</td>
+                        </tr>
+                        <tr>
+                            <td><span class="delete-toggle" onclick="toggleDelete(this)">&#9744;</span><span class="icon">&#127988;</span><span contenteditable="true">Inspire</span></td>
+                            <td><span class="feat-cat cat-support">Support</span></td>
+                            <td class="special" contenteditable="true">Adjacent friendly units deal +1 damage.</td>
+                            <td class="special" contenteditable="true">General</td>
+                            <td class="special" contenteditable="true">Win a battle with 3+ units alive.</td>
+                        </tr>
+                        <tr>
+                            <td><span class="delete-toggle" onclick="toggleDelete(this)">&#9744;</span><span class="icon">&#128165;</span><span contenteditable="true">Taunt</span></td>
+                            <td><span class="feat-cat cat-support">Support</span></td>
+                            <td class="special" contenteditable="true">Adjacent enemies must attack this unit if able.</td>
+                            <td class="special" contenteditable="true">Shieldman, Berserker</td>
+                            <td class="special" contenteditable="true">Absorb 10 damage points per battle.</td>
+                        </tr>
+
+                        <!-- TERRAIN -->
+                        <tr class="section-header"><td colspan="5">&#127966; Terrain Features</td></tr>
+                        <tr>
+                            <td><span class="delete-toggle" onclick="toggleDelete(this)">&#9744;</span><span class="icon">&#9968;</span><span contenteditable="true">Mountaineer</span></td>
+                            <td><span class="feat-cat cat-special">Special</span></td>
+                            <td class="special" contenteditable="true">Allows phase 3 attack when attacking units on hills or hills+forest terrain. Without this, attacker only deals phase 1 damage on hills.</td>
+                            <td class="special" contenteditable="true">All units</td>
+                            <td class="special" contenteditable="true">Win 2 combats on hill terrain.</td>
+                        </tr>
+
+                        <!-- MOBILITY -->
+                        <tr class="section-header"><td colspan="5">&#128099; Mobility Features</td></tr>
+                        <tr>
+                            <td><span class="delete-toggle" onclick="toggleDelete(this)">&#9744;</span><span class="icon">&#128168;</span><span contenteditable="true">Swift</span></td>
+                            <td><span class="feat-cat cat-mobility">Mobility</span></td>
+                            <td class="special" contenteditable="true">ZoC costs no extra AP. Can move after attacking.</td>
+                            <td class="special" contenteditable="true">Light Cavalry</td>
+                            <td class="special" contenteditable="true">Move 10+ hexes in one turn.</td>
+                        </tr>
+                        <tr>
+                            <td><span class="delete-toggle" onclick="toggleDelete(this)">&#9744;</span><span class="icon">&#128062;</span><span contenteditable="true">Trample</span></td>
+                            <td><span class="feat-cat cat-mobility">Mobility</span></td>
+                            <td class="special" contenteditable="true">After killing an enemy, can move 1 more hex.</td>
+                            <td class="special" contenteditable="true">Heavy Cavalry, Knight</td>
+                            <td class="special" contenteditable="true">Kill an enemy in one strike.</td>
+                        </tr>
+                        <tr>
+                            <td><span class="delete-toggle" onclick="toggleDelete(this)">&#9744;</span><span class="icon">&#129409;</span><span contenteditable="true">Pounce</span></td>
+                            <td><span class="feat-cat cat-mobility">Mobility</span></td>
+                            <td class="special" contenteditable="true">Can attack from 2 hexes away in one leap.</td>
+                            <td class="special" contenteditable="true">Light Cavalry, Berserker</td>
+                            <td class="special" contenteditable="true">Attack 3 different enemies per battle.</td>
+                        </tr>
+                        <tr>
+                            <td><span class="delete-toggle" onclick="toggleDelete(this)">&#9744;</span><span class="icon">&#128059;</span><span contenteditable="true">Scout</span></td>
+                            <td><span class="feat-cat cat-mobility">Mobility</span></td>
+                            <td class="special" contenteditable="true">Sees enemies within 5 hex. ZoC costs no extra AP.</td>
+                            <td class="special" contenteditable="true">Light Cavalry</td>
+                            <td class="special" contenteditable="true">Survive 3 battles.</td>
+                        </tr>
+                        <tr>
+                            <td><span class="delete-toggle" onclick="toggleDelete(this)">&#9744;</span><span class="icon">&#127984;</span><span contenteditable="true">Castle</span></td>
+                            <td><span class="feat-cat cat-mobility">Mobility</span></td>
+                            <td class="special" contenteditable="true">Swap positions with adjacent friendly (1 AP) or overstep to hex beyond (2 AP). Shown in yellow.</td>
+                            <td class="special" contenteditable="true">Shieldman, Warrior, Pikeman, Spearman, Phalanx (foot soldiers only)</td>
+                            <td class="special" contenteditable="true">Move 5+ hexes in one turn.</td>
+                        </tr>
+
+                        <!-- SPECIAL -->
+                        <tr class="section-header"><td colspan="5">&#10024; Special Features</td></tr>
+                        <tr>
+                            <td><span class="delete-toggle" onclick="toggleDelete(this)">&#9744;</span><span class="icon">&#129399;</span><span contenteditable="true">Stealth</span></td>
+                            <td><span class="feat-cat cat-special">Special</span></td>
+                            <td class="special" contenteditable="true">Enemies cannot see this unit until adjacent.</td>
+                            <td class="special" contenteditable="true">Light Cavalry</td>
+                            <td class="special" contenteditable="true">Perform 3 backstab attacks.</td>
+                        </tr>
+                        <tr>
+                            <td><span class="delete-toggle" onclick="toggleDelete(this)">&#9744;</span><span class="icon">&#128293;</span><span contenteditable="true">Burn</span></td>
+                            <td><span class="feat-cat cat-special">Special</span></td>
+                            <td class="special" contenteditable="true">Shot sets hex on fire. 1 damage each turn.</td>
+                            <td class="special" contenteditable="true">Longbowman, Crossbowman</td>
+                            <td class="special" contenteditable="true">Kill 2 enemies with shots.</td>
+                        </tr>
+                        <tr>
+                            <td><span class="delete-toggle" onclick="toggleDelete(this)">&#9744;</span><span class="icon">&#9939;&#65039;</span><span contenteditable="true">Hook</span></td>
+                            <td><span class="feat-cat cat-special">Special</span></td>
+                            <td class="special" contenteditable="true">Pull enemy 1 hex closer (2 hex range).</td>
+                            <td class="special" contenteditable="true">Shieldman</td>
+                            <td class="special" contenteditable="true">Block 5 enemy movements via ZoC.</td>
+                        </tr>
+                        <tr>
+                            <td><span class="delete-toggle" onclick="toggleDelete(this)">&#9744;</span><span class="icon">&#128058;</span><span contenteditable="true">Pack</span></td>
+                            <td><span class="feat-cat cat-special">Special</span></td>
+                            <td class="special" contenteditable="true">+1 damage for each adjacent friendly unit of the same type.</td>
+                            <td class="special" contenteditable="true">Pikeman, Shieldman</td>
+                            <td class="special" contenteditable="true">Fight with 2+ friendly units adjacent.</td>
+                        </tr>
+                        <tr>
+                            <td><span class="delete-toggle" onclick="toggleDelete(this)">&#9744;</span><span class="icon">&#127775;</span><span contenteditable="true">Skirmish</span></td>
+                            <td><span class="feat-cat cat-special">Special</span></td>
+                            <td class="special" contenteditable="true">Can shoot and melee attack in the same turn.</td>
+                            <td class="special" contenteditable="true">Longbowman</td>
+                            <td class="special" contenteditable="true">Land 3 shots and kill an enemy in the same battle.</td>
+                        </tr>
+                    </tbody>
+                </table>
+
+                <div class="stats-summary" id="featureStatsSummary">
+                    Total features: <span id="totalFeatures">0</span> | Active: <span id="activeFeatures">0</span> | Deleted: <span id="deletedFeatures">0</span>
+                </div>
+
+                <div class="notes">
+                    <h3>&#128203; Feature Progression</h3>
+                    <ul>
+                        <li><b>Progression</b> - units can acquire new features by fighting in battles.</li>
+                        <li><b>Condition</b> - each feature has a specific progression condition.</li>
+                        <li><b>Categories:</b>
+                            <span class="feat-cat cat-offense">Offense</span>
+                            <span class="feat-cat cat-defense">Defense</span>
+                            <span class="feat-cat cat-support">Support</span>
+                            <span class="feat-cat cat-mobility">Mobility</span>
+                            <span class="feat-cat cat-special">Special</span>
+                        </li>
+                        <li><b>Limit</b> - a unit can have at most 2 acquired features (excluding starting features).</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <!-- ===================== TERRAIN TAB ===================== -->
+        <div id="tab-terrain" class="tab-content">
+            <div class="table-container">
+                <div class="toolbar">
+                    <button class="btn-primary" onclick="exportToJSON('terrain')">&#128229; Export JSON</button>
+                    <button class="btn-secondary" onclick="saveToLocalStorage('terrain')">&#128190; Save</button>
+                    <button class="btn-secondary" onclick="loadFromLocalStorage('terrain')">&#128194; Load</button>
+                    <button class="btn-danger" onclick="resetToDefaults('terrain')">&#128260; Reset Defaults</button>
+                </div>
+
+                <p class="help-text">&#128161; Demo mode only. Terrain effects modify combat and movement rules.</p>
+
+                <!-- MOVEMENT COSTS -->
+                <h3 style="color: #5c3d1e; margin: 15px 0 10px 0;">&#128099; Movement Cost Multipliers</h3>
+                <table id="movementCostTable">
+                    <thead>
+                        <tr>
+                            <th style="width: 20%;">Terrain</th>
+                            <th style="width: 20%;">🐴 Mounted</th>
+                            <th style="width: 20%;">⚔️ Melee</th>
+                            <th style="width: 20%;">🏹 Ranged</th>
+                            <th style="width: 20%;">Notes</th>
+                        </tr>
+                    </thead>
+                    <tbody id="movementCostBody">
+                        <tr>
+                            <td><span class="icon">&#127793;</span>Plains</td>
+                            <td contenteditable="true" data-terrain="plains" data-unit="mounted">1</td>
+                            <td contenteditable="true" data-terrain="plains" data-unit="melee">1</td>
+                            <td contenteditable="true" data-terrain="plains" data-unit="ranged">1</td>
+                            <td class="special">Normal movement</td>
+                        </tr>
+                        <tr>
+                            <td><span class="icon">&#127794;</span>Forest</td>
+                            <td contenteditable="true" data-terrain="forest" data-unit="mounted">1.5</td>
+                            <td contenteditable="true" data-terrain="forest" data-unit="melee">1</td>
+                            <td contenteditable="true" data-terrain="forest" data-unit="ranged">1</td>
+                            <td class="special">Cavalry slowed</td>
+                        </tr>
+                        <tr>
+                            <td><span class="icon">&#9968;</span>Hills</td>
+                            <td contenteditable="true" data-terrain="hills" data-unit="mounted">2</td>
+                            <td contenteditable="true" data-terrain="hills" data-unit="melee">2</td>
+                            <td contenteditable="true" data-terrain="hills" data-unit="ranged">2</td>
+                            <td class="special">All units slowed</td>
+                        </tr>
+                        <tr>
+                            <td><span class="icon">&#127956;</span>Hills + Forest</td>
+                            <td contenteditable="true" data-terrain="hillsForest" data-unit="mounted">2</td>
+                            <td contenteditable="true" data-terrain="hillsForest" data-unit="melee">2</td>
+                            <td contenteditable="true" data-terrain="hillsForest" data-unit="ranged">2</td>
+                            <td class="special">Very difficult terrain</td>
+                        </tr>
+                        <tr>
+                            <td><span class="icon">&#127754;</span>Lake</td>
+                            <td contenteditable="true" data-terrain="lake" data-unit="mounted">∞</td>
+                            <td contenteditable="true" data-terrain="lake" data-unit="melee">∞</td>
+                            <td contenteditable="true" data-terrain="lake" data-unit="ranged">∞</td>
+                            <td class="special">Impassable</td>
+                        </tr>
+                    </tbody>
+                </table>
+
+                <!-- RANGED COMBAT MODIFIERS -->
+                <h3 style="color: #5c3d1e; margin: 25px 0 10px 0;">&#127993; Ranged Combat Rules</h3>
+                <table id="rangedModifiersTable">
+                    <thead>
+                        <tr>
+                            <th style="width: 20%;">Terrain</th>
+                            <th style="width: 20%;">Arrow Protection</th>
+                            <th style="width: 20%;">Max Shoot Range</th>
+                            <th style="width: 40%;">Description</th>
+                        </tr>
+                    </thead>
+                    <tbody id="rangedModifiersBody">
+                        <tr>
+                            <td><span class="icon">&#127793;</span>Plains</td>
+                            <td contenteditable="true" data-terrain="plains" data-type="arrowProtection">None</td>
+                            <td contenteditable="true" data-terrain="plains" data-type="maxRange">3</td>
+                            <td class="special">Open terrain, no cover</td>
+                        </tr>
+                        <tr>
+                            <td><span class="icon">&#127794;</span>Forest</td>
+                            <td contenteditable="true" data-terrain="forest" data-type="arrowProtection">Distance > 1</td>
+                            <td contenteditable="true" data-terrain="forest" data-type="maxRange">1</td>
+                            <td class="special">Arrows blocked if shooter > 1 hex away. Archer in forest can only shoot 1 hex.</td>
+                        </tr>
+                        <tr>
+                            <td><span class="icon">&#9968;</span>Hills</td>
+                            <td contenteditable="true" data-terrain="hills" data-type="arrowProtection">None</td>
+                            <td contenteditable="true" data-terrain="hills" data-type="maxRange">3</td>
+                            <td class="special">Open terrain, normal range</td>
+                        </tr>
+                        <tr>
+                            <td><span class="icon">&#127956;</span>Hills + Forest</td>
+                            <td contenteditable="true" data-terrain="hillsForest" data-type="arrowProtection">Distance > 1</td>
+                            <td contenteditable="true" data-terrain="hillsForest" data-type="maxRange">1</td>
+                            <td class="special">Forest cover protects from distant arrows. Archer limited to 1 hex.</td>
+                        </tr>
+                    </tbody>
+                </table>
+
+                <!-- MELEE COMBAT MODIFIERS -->
+                <h3 style="color: #5c3d1e; margin: 25px 0 10px 0;">&#9876; Melee Combat Rules</h3>
+                <table id="meleeModifiersTable">
+                    <thead>
+                        <tr>
+                            <th style="width: 20%;">Terrain</th>
+                            <th style="width: 20%;">Combat Lock</th>
+                            <th style="width: 20%;">Attack Phases</th>
+                            <th style="width: 40%;">Description</th>
+                        </tr>
+                    </thead>
+                    <tbody id="meleeModifiersBody">
+                        <tr>
+                            <td><span class="icon">&#127793;</span>Plains</td>
+                            <td contenteditable="true" data-terrain="plains" data-type="combatLock">Normal</td>
+                            <td contenteditable="true" data-terrain="plains" data-type="attackPhases">1, 3</td>
+                            <td class="special">Standard combat rules</td>
+                        </tr>
+                        <tr>
+                            <td><span class="icon">&#127794;</span>Forest</td>
+                            <td contenteditable="true" data-terrain="forest" data-type="combatLock">Normal</td>
+                            <td contenteditable="true" data-terrain="forest" data-type="attackPhases">1, 3</td>
+                            <td class="special">Standard combat rules</td>
+                        </tr>
+                        <tr>
+                            <td><span class="icon">&#9968;</span>Hills</td>
+                            <td contenteditable="true" data-terrain="hills" data-type="combatLock">No lock</td>
+                            <td contenteditable="true" data-terrain="hills" data-type="attackPhases">1 only*</td>
+                            <td class="special">Attacker does NOT lock defender. Phase 3 requires Mountaineer feature.</td>
+                        </tr>
+                        <tr>
+                            <td><span class="icon">&#127956;</span>Hills + Forest</td>
+                            <td contenteditable="true" data-terrain="hillsForest" data-type="combatLock">No lock</td>
+                            <td contenteditable="true" data-terrain="hillsForest" data-type="attackPhases">1 only*</td>
+                            <td class="special">Attacker does NOT lock defender. Phase 3 requires Mountaineer feature.</td>
+                        </tr>
+                    </tbody>
+                </table>
+
+                <!-- SPECIAL ABILITIES -->
+                <h3 style="color: #5c3d1e; margin: 25px 0 10px 0;">&#10024; Unit Terrain Abilities</h3>
+                <table id="terrainAbilitiesTable">
+                    <thead>
+                        <tr>
+                            <th style="width: 15%;">Unit</th>
+                            <th style="width: 25%;">Ability</th>
+                            <th style="width: 25%;">Terrain Restriction</th>
+                            <th style="width: 35%;">Description</th>
+                        </tr>
+                    </thead>
+                    <tbody id="terrainAbilitiesBody">
+                        <tr>
+                            <td><span class="icon">&#9822;</span>Knight</td>
+                            <td contenteditable="true">Charge</td>
+                            <td contenteditable="true">Plains only</td>
+                            <td class="special">Can only use Charge ability when on plains AND attacking into plains. No Charge in/into forests or hills.</td>
+                        </tr>
+                        <tr>
+                            <td><span class="icon">&#128737;&#65039;</span>Shieldman</td>
+                            <td contenteditable="true">-</td>
+                            <td contenteditable="true">-</td>
+                            <td class="special">No terrain-specific ability. Benefits from general hill defense rules.</td>
+                        </tr>
+                        <tr>
+                            <td><span class="icon">&#127993;</span>Archer</td>
+                            <td contenteditable="true">Shooting</td>
+                            <td contenteditable="true">Forest: 1 hex max</td>
+                            <td class="special">In forest, can only shoot at 1 hex distance. No extra range from hills. Forests block line of sight.</td>
+                        </tr>
+                        <tr class="section-header">
+                            <td colspan="4">&#128200; Required Features</td>
+                        </tr>
+                        <tr>
+                            <td><span class="icon">&#9968;</span>Any</td>
+                            <td contenteditable="true">Mountaineer</td>
+                            <td contenteditable="true">Hills, Hills+Forest</td>
+                            <td class="special">Required to deal damage in phase 3 when attacking a unit on hills or hills+forest. Without this feature, attacker only deals phase 1 damage.</td>
+                        </tr>
+                    </tbody>
+                </table>
+
+                <!-- LINE OF SIGHT -->
+                <h3 style="color: #5c3d1e; margin: 25px 0 10px 0;">&#128065; Line of Sight</h3>
+                <table id="losTable">
+                    <thead>
+                        <tr>
+                            <th style="width: 25%;">Terrain</th>
+                            <th style="width: 25%;">Blocks LOS</th>
+                            <th style="width: 50%;">Notes</th>
+                        </tr>
+                    </thead>
+                    <tbody id="losBody">
+                        <tr>
+                            <td><span class="icon">&#127793;</span>Plains</td>
+                            <td contenteditable="true" data-terrain="plains" data-type="blocksLOS">No</td>
+                            <td class="special">Clear view</td>
+                        </tr>
+                        <tr>
+                            <td><span class="icon">&#127794;</span>Forest</td>
+                            <td contenteditable="true" data-terrain="forest" data-type="blocksLOS">Yes</td>
+                            <td class="special">Trees block line of sight for ranged attacks</td>
+                        </tr>
+                        <tr>
+                            <td><span class="icon">&#9968;</span>Hills</td>
+                            <td contenteditable="true" data-terrain="hills" data-type="blocksLOS">No</td>
+                            <td class="special">Can see over hills</td>
+                        </tr>
+                        <tr>
+                            <td><span class="icon">&#127956;</span>Hills + Forest</td>
+                            <td contenteditable="true" data-terrain="hillsForest" data-type="blocksLOS">Yes</td>
+                            <td class="special">Forest on hills blocks view</td>
+                        </tr>
+                    </tbody>
+                </table>
+
+                <div class="notes">
+                    <h3>&#128203; Terrain Rules Summary (Demo Mode)</h3>
+                    <ul>
+                        <li><b>Movement Cost</b> - multiplier applied to AP cost when entering terrain. 1.0 = normal, 2.0 = double cost, &#8734; = impassable.</li>
+                        <li><b>Arrow Protection</b> - "Distance > 1" means arrows deal no damage if shooter is more than 1 hex away.</li>
+                        <li><b>Combat Lock</b> - "No lock" means the attacker does not engage/lock the defender on hills terrain.</li>
+                        <li><b>Attack Phases</b> - "1 only*" means attacker only deals damage in phase 1 unless they have Mountaineer feature.</li>
+                        <li><b>Mountaineer</b> - new feature required to deal full damage (phases 1 and 3) when attacking units on hills.</li>
+                        <li><b>Knight Charge</b> - only works on/into plains terrain. Cannot charge in forests or on hills.</li>
+                        <li><b>Archer in Forest</b> - maximum shooting range reduced to 1 hex.</li>
+                        <li><b>Line of Sight</b> - forests block LOS for ranged attacks. Hills do not block LOS.</li>
+                    </ul>
+                </div>
+
+                <div class="stats-summary">
+                    Terrain modifiers affect Demo mode only. Classic and Arcade modes use standard rules.
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Main initialization
+        document.addEventListener('DOMContentLoaded', () => {
+            // Auto-load saved tables from localStorage
+            const savedUnits = localStorage.getItem('bataliaUnitsTable');
+            if (savedUnits) {
+                document.getElementById('unitsTableBody').innerHTML = savedUnits;
+            }
+            const savedFeatures = localStorage.getItem('bataliaFeaturesTable');
+            if (savedFeatures) {
+                document.getElementById('featuresTableBody').innerHTML = savedFeatures;
+            }
+            rebindAllListeners();
+            updateAllStats();
+            // Auto-save on any change within the tables
+            const observer = new MutationObserver(() => {
+                autoSave();
+            });
+            observer.observe(document.getElementById('unitsTableBody'), { childList: true, subtree: true, characterData: true, attributes: true });
+            observer.observe(document.getElementById('featuresTableBody'), { childList: true, subtree: true, characterData: true, attributes: true });
+            // Observe terrain tables
+            ['movementCostBody', 'rangedModifiersBody', 'meleeModifiersBody', 'terrainAbilitiesBody', 'losBody'].forEach(id => {
+                const el = document.getElementById(id);
+                if (el) observer.observe(el, { childList: true, subtree: true, characterData: true, attributes: true });
+            });
+            // Also save on contenteditable input
+            document.querySelectorAll('#unitsTable, #featuresTable, #movementCostTable, #rangedModifiersTable, #meleeModifiersTable, #terrainAbilitiesTable, #losTable').forEach(table => {
+                table.addEventListener('input', autoSave);
+            });
+            // Load saved terrain data
+            const savedTerrain = localStorage.getItem('bataliaTerrainData');
+            if (savedTerrain) {
+                loadTerrainData(JSON.parse(savedTerrain));
+            }
+        });
+
+        let autoSaveTimer = null;
+        function autoSave() {
+            clearTimeout(autoSaveTimer);
+            autoSaveTimer = setTimeout(() => {
+                localStorage.setItem('bataliaUnitsTable', document.getElementById('unitsTableBody').innerHTML);
+                localStorage.setItem('bataliaFeaturesTable', document.getElementById('featuresTableBody').innerHTML);
+                localStorage.setItem('bataliaTerrainData', JSON.stringify(collectTerrainData()));
+            }, 500);
+        }
+
+        function collectTerrainData() {
+            const data = {
+                movementCost: {},
+                rangedModifiers: {},
+                meleeModifiers: {},
+                terrainAbilities: [],
+                lineOfSight: {}
+            };
+            // Movement costs
+            document.querySelectorAll('#movementCostBody td[data-terrain]').forEach(cell => {
+                const terrain = cell.dataset.terrain;
+                const unit = cell.dataset.unit;
+                if (!data.movementCost[terrain]) data.movementCost[terrain] = {};
+                data.movementCost[terrain][unit] = cell.textContent.trim();
+            });
+            // Ranged modifiers
+            document.querySelectorAll('#rangedModifiersBody td[data-terrain]').forEach(cell => {
+                const terrain = cell.dataset.terrain;
+                const type = cell.dataset.type;
+                if (!data.rangedModifiers[terrain]) data.rangedModifiers[terrain] = {};
+                data.rangedModifiers[terrain][type] = cell.textContent.trim();
+            });
+            // Melee modifiers
+            document.querySelectorAll('#meleeModifiersBody td[data-terrain]').forEach(cell => {
+                const terrain = cell.dataset.terrain;
+                const type = cell.dataset.type;
+                if (!data.meleeModifiers[terrain]) data.meleeModifiers[terrain] = {};
+                data.meleeModifiers[terrain][type] = cell.textContent.trim();
+            });
+            // Terrain abilities
+            document.querySelectorAll('#terrainAbilitiesBody tr:not(.section-header)').forEach(row => {
+                const cells = row.querySelectorAll('td');
+                if (cells.length >= 4) {
+                    data.terrainAbilities.push({
+                        unit: cells[0].textContent.trim(),
+                        ability: cells[1].textContent.trim(),
+                        restriction: cells[2].textContent.trim(),
+                        description: cells[3].textContent.trim()
+                    });
+                }
+            });
+            // Line of sight
+            document.querySelectorAll('#losBody td[data-terrain]').forEach(cell => {
+                const terrain = cell.dataset.terrain;
+                data.lineOfSight[terrain] = cell.textContent.trim();
+            });
+            return data;
+        }
+
+        function loadTerrainData(data) {
+            if (!data) return;
+            // Movement costs
+            if (data.movementCost) {
+                Object.entries(data.movementCost).forEach(([terrain, units]) => {
+                    Object.entries(units).forEach(([unit, value]) => {
+                        const cell = document.querySelector(`#movementCostBody td[data-terrain="${terrain}"][data-unit="${unit}"]`);
+                        if (cell) cell.textContent = value;
+                    });
+                });
+            }
+            // Ranged modifiers
+            if (data.rangedModifiers) {
+                Object.entries(data.rangedModifiers).forEach(([terrain, types]) => {
+                    Object.entries(types).forEach(([type, value]) => {
+                        const cell = document.querySelector(`#rangedModifiersBody td[data-terrain="${terrain}"][data-type="${type}"]`);
+                        if (cell) cell.textContent = value;
+                    });
+                });
+            }
+            // Melee modifiers
+            if (data.meleeModifiers) {
+                Object.entries(data.meleeModifiers).forEach(([terrain, types]) => {
+                    Object.entries(types).forEach(([type, value]) => {
+                        const cell = document.querySelector(`#meleeModifiersBody td[data-terrain="${terrain}"][data-type="${type}"]`);
+                        if (cell) cell.textContent = value;
+                    });
+                });
+            }
+            // Line of sight
+            if (data.lineOfSight) {
+                Object.entries(data.lineOfSight).forEach(([terrain, value]) => {
+                    const cell = document.querySelector(`#losBody td[data-terrain="${terrain}"]`);
+                    if (cell) cell.textContent = value;
+                });
+            }
+        }
+
+        function rebindAllListeners() {
+            document.querySelectorAll('.delete-toggle').forEach(btn => {
+                btn.onclick = function() { toggleDelete(this); };
+            });
+            document.querySelectorAll('.add-feature-btn').forEach(btn => {
+                btn.onclick = function(e) { e.preventDefault(); e.stopPropagation(); showFeatureDropdown(this); };
+            });
+            document.querySelectorAll('.remove-feat').forEach(btn => {
+                btn.onclick = function() { this.parentElement.remove(); };
+            });
+        }
+
+        function switchTab(tabName) {
+            document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
+            document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+            document.getElementById('tab-' + tabName).classList.add('active');
+            const buttons = document.querySelectorAll('.tab-btn');
+            buttons.forEach(b => {
+                if ((tabName === 'units' && b.textContent.includes('Units')) ||
+                    (tabName === 'features' && b.textContent.includes('Features')) ||
+                    (tabName === 'terrain' && b.textContent.includes('Terrain'))) {
+                    b.classList.add('active');
+                }
+            });
+            updateAllStats();
+        }
+
+        function toggleDelete(btn) {
+            const row = btn.closest('tr');
+            row.classList.toggle('deleted');
+            btn.textContent = row.classList.contains('deleted') ? '\u2612' : '\u2610';
+            updateAllStats();
+        }
+
+        function addNewUnitRow() {
+            const tbody = document.getElementById('unitsTableBody');
+            const newRow = document.createElement('tr');
+            newRow.className = 'new-unit';
+            newRow.setAttribute('data-unit', 'custom_' + Date.now());
+            newRow.innerHTML = `
+                <td><span class="delete-toggle">\u2610</span><span class="icon">\u2753</span><span contenteditable="true">New Unit</span></td>
+                <td contenteditable="true">5</td>
+                <td contenteditable="true">2</td>
+                <td contenteditable="true">1+1</td>
+                <td contenteditable="true">-</td>
+                <td class="special" contenteditable="true">Describe the unit...</td>
+                <td class="assigned-features-cell">
+                    <div class="assigned-features-container"></div>
+                    <button class="add-feature-btn">+ Feature</button>
+                </td>
+            `;
+            tbody.appendChild(newRow);
+            rebindAllListeners();
+            updateAllStats();
+        }
+
+        function addNewFeatureRow() {
+            const tbody = document.getElementById('featuresTableBody');
+            const newRow = document.createElement('tr');
+            newRow.className = 'new-unit';
+            newRow.innerHTML = `
+                <td><span class="delete-toggle">\u2610</span><span class="icon">\u2753</span><span contenteditable="true">New Feature</span></td>
+                <td><span class="feat-cat cat-special">Special</span></td>
+                <td class="special" contenteditable="true">Describe the feature...</td>
+                <td class="special" contenteditable="true">Which units can acquire...</td>
+                <td class="special" contenteditable="true">Progression condition...</td>
+            `;
+            tbody.appendChild(newRow);
+            rebindAllListeners();
+            updateAllStats();
+        }
+
+        function getAvailableFeatures() {
+            const features = [];
+            const rows = document.querySelectorAll('#featuresTableBody tr:not(.section-header)');
+            rows.forEach(row => {
+                if (!row.classList.contains('deleted')) {
+                    const editable = row.querySelector('td:first-child [contenteditable]');
+                    if (editable) {
+                        const name = editable.textContent.trim();
+                        if (name) features.push(name);
+                    }
+                }
+            });
+            return features;
+        }
+
+        function showFeatureDropdown(button) {
+            // Remove any existing dropdown
+            const cell = button.closest('.assigned-features-cell') || button.closest('td');
+            const existingDropdown = cell.querySelector('.feature-dropdown');
+            if (existingDropdown) {
+                existingDropdown.remove();
+                return;
+            }
+
+            const features = getAvailableFeatures();
+            const container = cell.querySelector('.assigned-features-container');
+            const currentFeatures = container ? Array.from(container.querySelectorAll('.feature-tag span:first-child')).map(s => s.textContent.trim()) : [];
+
+            const select = document.createElement('select');
+            select.className = 'feature-dropdown';
+            select.innerHTML = '<option value="">- Select feature -</option>';
+
+            features.forEach(feature => {
+                if (!currentFeatures.includes(feature)) {
+                    const opt = document.createElement('option');
+                    opt.value = feature;
+                    opt.textContent = feature;
+                    select.appendChild(opt);
+                }
+            });
+
+            select.addEventListener('change', function() {
+                if (this.value) {
+                    addFeatureToUnit(cell, this.value);
+                }
+                this.remove();
+            });
+
+            // Close on blur with small delay to allow change event
+            select.addEventListener('blur', function() {
+                setTimeout(() => { if (this.parentNode) this.remove(); }, 200);
+            });
+
+            cell.appendChild(select);
+            select.focus();
+        }
+
+        function addFeatureToUnit(cell, featureName) {
+            const container = cell.querySelector('.assigned-features-container');
+            if (!container) return;
+            const tag = document.createElement('div');
+            tag.className = 'feature-tag';
+            tag.innerHTML = '<span>' + featureName + '</span><span class="remove-feat">&times;</span>';
+            tag.querySelector('.remove-feat').onclick = function() { this.parentElement.remove(); };
+            container.appendChild(tag);
+        }
+
+        function updateAllStats() {
+            // Units
+            const unitRows = document.querySelectorAll('#unitsTableBody tr:not(.section-header)');
+            const unitDeleted = document.querySelectorAll('#unitsTableBody tr.deleted').length;
+            document.getElementById('totalUnits').textContent = unitRows.length;
+            document.getElementById('activeUnits').textContent = unitRows.length - unitDeleted;
+            document.getElementById('deletedUnits').textContent = unitDeleted;
+
+            // Features
+            const featRows = document.querySelectorAll('#featuresTableBody tr:not(.section-header)');
+            const featDeleted = document.querySelectorAll('#featuresTableBody tr.deleted').length;
+            document.getElementById('totalFeatures').textContent = featRows.length;
+            document.getElementById('activeFeatures').textContent = featRows.length - featDeleted;
+            document.getElementById('deletedFeatures').textContent = featDeleted;
+        }
+
+        function exportToJSON(type) {
+            if (type === 'units') {
+                const rows = document.querySelectorAll('#unitsTableBody tr:not(.section-header)');
+                const units = [];
+                rows.forEach(row => {
+                    const cells = row.querySelectorAll('td');
+                    if (cells.length >= 7) {
+                        const nameCell = cells[0];
+                        const icon = nameCell.querySelector('.icon')?.textContent || '';
+                        const name = nameCell.querySelector('[contenteditable]')?.textContent || '';
+                        const featureTags = cells[6].querySelectorAll('.feature-tag span:first-child');
+                        const features = Array.from(featureTags).map(s => s.textContent.trim());
+                        units.push({
+                            name: name.trim(),
+                            icon: icon.trim(),
+                            hp: cells[1].textContent.trim(),
+                            ap: cells[2].textContent.trim(),
+                            melee: cells[3].textContent.trim(),
+                            ranged: cells[4].textContent.trim(),
+                            description: cells[5].textContent.trim(),
+                            features: features,
+                            deleted: row.classList.contains('deleted'),
+                            dataUnit: row.dataset.unit || ''
+                        });
+                    }
+                });
+                downloadJSON(units, 'batalia_units.json');
+            } else if (type === 'features') {
+                const rows = document.querySelectorAll('#featuresTableBody tr:not(.section-header)');
+                const features = [];
+                rows.forEach(row => {
+                    const cells = row.querySelectorAll('td');
+                    if (cells.length >= 5) {
+                        const nameCell = cells[0];
+                        const name = nameCell.querySelector('[contenteditable]')?.textContent || '';
+                        const catEl = cells[1].querySelector('.feat-cat');
+                        features.push({
+                            name: name.trim(),
+                            category: catEl ? catEl.textContent.trim() : '',
+                            description: cells[2].textContent.trim(),
+                            learnableBy: cells[3].textContent.trim(),
+                            progressionCondition: cells[4].textContent.trim(),
+                            deleted: row.classList.contains('deleted')
+                        });
+                    }
+                });
+                downloadJSON(features, 'batalia_features.json');
+            } else if (type === 'terrain') {
+                downloadJSON(collectTerrainData(), 'batalia_terrain.json');
+            }
+        }
+
+        function downloadJSON(data, filename) {
+            const dataStr = JSON.stringify(data, null, 2);
+            const blob = new Blob([dataStr], {type: 'application/json'});
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = filename;
+            a.click();
+            URL.revokeObjectURL(url);
+        }
+
+        function saveToLocalStorage(type) {
+            if (type === 'units') {
+                localStorage.setItem('bataliaUnitsTable', document.getElementById('unitsTableBody').innerHTML);
+            } else if (type === 'features') {
+                localStorage.setItem('bataliaFeaturesTable', document.getElementById('featuresTableBody').innerHTML);
+            } else if (type === 'terrain') {
+                localStorage.setItem('bataliaTerrainData', JSON.stringify(collectTerrainData()));
+            }
+            alert('\u2705 Table saved!');
+        }
+
+        function loadFromLocalStorage(type) {
+            if (type === 'terrain') {
+                const saved = localStorage.getItem('bataliaTerrainData');
+                if (saved) {
+                    loadTerrainData(JSON.parse(saved));
+                    alert('\u2705 Terrain data loaded!');
+                } else {
+                    alert('\u274C No saved terrain data found.');
+                }
+                return;
+            }
+            const key = type === 'units' ? 'bataliaUnitsTable' : 'bataliaFeaturesTable';
+            const bodyId = type === 'units' ? 'unitsTableBody' : 'featuresTableBody';
+            const saved = localStorage.getItem(key);
+            if (saved) {
+                document.getElementById(bodyId).innerHTML = saved;
+                rebindAllListeners();
+                updateAllStats();
+                alert('\u2705 Table loaded!');
+            } else {
+                alert('\u274C No saved table found.');
+            }
+        }
+
+        function clearDeleted(bodyId) {
+            if (confirm('Are you sure you want to remove all deleted rows?')) {
+                document.querySelectorAll('#' + bodyId + ' tr.deleted').forEach(row => row.remove());
+                updateAllStats();
+            }
+        }
+
+        function resetToDefaults(type) {
+            if (confirm('This will clear all saved changes and reload the default table. Are you sure?')) {
+                if (type === 'terrain') {
+                    localStorage.removeItem('bataliaTerrainData');
+                } else {
+                    const key = type === 'units' ? 'bataliaUnitsTable' : 'bataliaFeaturesTable';
+                    localStorage.removeItem(key);
+                }
+                location.reload();
+            }
+        }
+    </script>
+</body>
+</html>
