@@ -29,13 +29,11 @@ batalia/
 │   ├── units_table.html   # Unit stats editor
 │   └── images/            # Game assets
 │
-├── server/                 # Multiplayer server
-│   ├── server.js          # Socket.io server
-│   ├── package.json       # Node.js dependencies
-│   ├── Dockerfile         # Docker deployment
-│   ├── fly.toml           # Fly.io config
-│   └── railway.json       # Railway config
-│
+├── server.js              # Socket.io multiplayer server
+├── package.json           # Node.js dependencies
+├── Dockerfile             # Docker deployment
+├── fly.toml               # Fly.io config
+├── railway.json           # Railway config
 └── README.md
 ```
 
@@ -52,7 +50,6 @@ batalia/
 #### Option 1: Fly.io (Recommended)
 
 ```bash
-cd server
 fly launch
 fly deploy
 ```
@@ -60,19 +57,17 @@ fly deploy
 #### Option 2: Railway
 
 ```bash
-cd server
 # Connect to Railway and deploy via dashboard
 ```
 
 #### Option 3: Local Development
 
 ```bash
-cd server
 npm install
 node server.js
 ```
 
-Server runs on port 3000 by default.
+Server runs on port 8080 by default.
 
 ### Client Setup
 
