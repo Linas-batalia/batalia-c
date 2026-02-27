@@ -8,8 +8,13 @@ const http = require('http');
 const { Server } = require('socket.io');
 const cors = require('cors');
 
+const path = require('path');
+
 const app = express();
 app.use(cors());
+
+// Serve static files from client folder
+app.use(express.static(path.join(__dirname, 'client')));
 
 // Trust proxy for Railway/Render
 app.set('trust proxy', 1);
@@ -287,8 +292,13 @@ io.on('connection', (socket) => {
     }
 });
 
-// Health check endpoint
+// Serve game.html on root
 app.get('/', (req, res) => {
+    res.sendFile(path.join(__dirname, 'client', 'game.html'));
+});
+
+// Health check endpoint
+app.get('/status', (req, res) => {
     res.json({
         status: 'Batalia server running',
         rooms: rooms.size,
