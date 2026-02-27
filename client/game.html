@@ -1277,6 +1277,16 @@
             return null; // Local multiplayer - show everything
         }
 
+        // Get counter-rotation angle for UI elements based on board rotation
+        // Green team / local: board is rotated 90°, counter-rotate by -90°
+        // Red team online: board is rotated 270°, counter-rotate by +90°
+        function getUICounterRotation() {
+            if (isOnlineGame && myColor === 'red') {
+                return Math.PI / 2;
+            }
+            return -Math.PI / 2;
+        }
+
         // animType: 'up-left' (opponent damage), 'up-right' (player damage), 'scale' (Charge/Backstab)
         // unit: optional - if provided, text only shows if unit is visible to viewing team
         function addFloatingText(x, y, text, color, size = 24, animType = 'up-right', unit = null) {
@@ -1334,7 +1344,7 @@
             floatingTexts.forEach(ft => {
                 ctx.save();
                 ctx.translate(ft.x + ft.offsetX, ft.y + ft.offsetY);
-                ctx.rotate(-Math.PI / 2); // Counter-rotate to appear upright
+                ctx.rotate(getUICounterRotation()); // Counter-rotate to appear upright
 
                 if (ft.animType === 'scale') {
                     ctx.scale(ft.textScale, ft.textScale);
@@ -1989,7 +1999,7 @@
             light_cavalry: { tier: 2, name: 'Light Cavalry', icon: '🐴', equipment: 'horse', cost: 15, hp: 6, ap: 4, melee: '1+1', ranged: '-', features: ['Swift'], upgrades: ['knight', 'elephant'], from: 'swordman' },
 
             // Tier 3 - Elite units
-            knight: { tier: 3, name: 'Knight', icon: '♞', equipment: 'armor', cost: 20, hp: 8, ap: 3, melee: '1+1', ranged: '-', features: ['Charge', 'Trample'], upgrades: ['heavy_cavalry'], from: 'light_cavalry' },
+            knight: { tier: 3, name: 'Knight', icon: '🐴', equipment: 'armor', cost: 20, hp: 8, ap: 3, melee: '1+1', ranged: '-', features: ['Charge', 'Trample'], upgrades: ['heavy_cavalry'], from: 'light_cavalry' },
             arbalest: { tier: 3, name: 'Arbalest', icon: '🎯', equipment: 'crossbow', cost: 15, hp: 5, ap: 2, melee: '-', ranged: '2, 4hex', features: ['Piercing'], upgrades: [], from: 'archer' },
             longbowman: { tier: 3, name: 'Longbowman', icon: '🏹', equipment: 'longbow', cost: 15, hp: 5, ap: 2, melee: '-', ranged: '1-2, 4hex', features: [], upgrades: [], from: 'archer' },
             pikeman: { tier: 3, name: 'Pikeman', icon: '🚩', equipment: 'pike', cost: 15, hp: 5, ap: 2, melee: '1+3', ranged: '-', features: ['Brace', 'Castle', 'Formation'], upgrades: [], from: 'phalanx' },
@@ -2818,7 +2828,7 @@
         // Hardcoded fallback units in case file loading fails
         const FALLBACK_UNITS = {
             'general': { type: 'general', hp: 10, ap: 3, dmg: 1, icon: '👑', name: 'General', features: ['Charge'], melee: {atk:1, counter:1}, ranged: null, isRanged: false, canShoot: false, canMelee: true, shootRange: 0 },
-            'knight': { type: 'knight', hp: 8, ap: 3, dmg: 1, icon: '♞', name: 'Knight', features: ['Charge'], melee: {atk:1, counter:1}, ranged: null, isRanged: false, canShoot: false, canMelee: true, shootRange: 0 },
+            'knight': { type: 'knight', hp: 8, ap: 3, dmg: 1, icon: '🐴', name: 'Knight', features: ['Charge'], melee: {atk:1, counter:1}, ranged: null, isRanged: false, canShoot: false, canMelee: true, shootRange: 0 },
             'shieldman': { type: 'shieldman', hp: 6, ap: 2, dmg: 1, icon: '⛨', name: 'Shieldman', features: ['Castle'], melee: {atk:1, counter:1}, ranged: null, isRanged: false, canShoot: false, canMelee: true, shootRange: 0 },
             'archer': { type: 'archer', hp: 5, ap: 2, dmg: 0, icon: '🏹', name: 'Longbowman', features: [], melee: null, ranged: {dmgMin:1, dmgMax:2, range:3}, isRanged: true, canShoot: true, canMelee: false, shootRange: 3 },
             'warrior': { type: 'warrior', hp: 7, ap: 3, dmg: 2, icon: '🔨', name: 'Warrior', features: ['Castle'], melee: {atk:2, counter:1}, ranged: null, isRanged: false, canShoot: false, canMelee: true, shootRange: 0 },
@@ -3783,7 +3793,12 @@
         function getLocalCoordinates(px, py) {
             // Account for board shift left by 60px for rules panel
             const cx = canvas.width/2 - 60, cy = canvas.height/2, dx = px - cx, dy = py - cy;
-            const ca = 0, sa = -1;
+            // Standard rotation is 90° (ca=0, sa=-1)
+            // Red team in online mode has extra 180° rotation (ca=0, sa=1)
+            let ca = 0, sa = -1;
+            if (isOnlineGame && myColor === 'red') {
+                sa = 1; // Flip for 180° extra rotation
+            }
             return { x: (dx*ca - dy*sa) + bW/2, y: (dx*sa + dy*ca) + bH/2 };
         }
         function getHexAt(px, py) {
@@ -3867,8 +3882,8 @@
         function drawTerrainDecorations(ctx, x, y, size, t, c, r) {
             ctx.save();
             ctx.translate(x, y);
-            // Rotate -90 degrees to counter board rotation
-            ctx.rotate(-Math.PI / 2);
+            // Rotate to counter board rotation
+            ctx.rotate(getUICounterRotation());
 
             // 3 hill bump variations for visual variety
             const hillVariants = [
@@ -7590,7 +7605,7 @@
             // Offset flag lower on the hex to stay within bounds
             const yOffset = HEX_SIZE * scale * 0.15;
             ctx.translate(cnt.x, cnt.y + yOffset);
-            ctx.rotate(-Math.PI / 2); // Counter-rotate for readability
+            ctx.rotate(getUICounterRotation()); // Counter-rotate for readability
 
             // Draw flag pole
             const poleHeight = 32 * flagScale;
@@ -7674,7 +7689,7 @@
 
                 ctx.save();
                 ctx.translate(startX, startY);
-                ctx.rotate(-Math.PI / 2);
+                ctx.rotate(getUICounterRotation());
 
                 ctx.fillStyle = 'rgba(61, 41, 20, 0.7)';
                 ctx.font = `bold ${10 * scale}px Cinzel`;
@@ -7698,7 +7713,7 @@
 
                 ctx.save();
                 ctx.translate(startX, startY);
-                ctx.rotate(-Math.PI / 2);
+                ctx.rotate(getUICounterRotation());
 
                 ctx.fillStyle = 'rgba(61, 41, 20, 0.7)';
                 ctx.font = `bold ${10 * scale}px Cinzel`;
@@ -7965,35 +7980,35 @@
             // N at screen top (board left edge)
             ctx.save();
             ctx.translate(-paddingX / 2, bH / 2);
-            ctx.rotate(-Math.PI / 2);
+            ctx.rotate(getUICounterRotation());
             ctx.fillText('N', 0, 0);
             ctx.restore();
 
             // S at screen bottom (board right edge)
             ctx.save();
             ctx.translate(bW + paddingX / 2, bH / 2);
-            ctx.rotate(-Math.PI / 2);
+            ctx.rotate(getUICounterRotation());
             ctx.fillText('S', 0, 0);
             ctx.restore();
 
             // E at screen right (board top edge)
             ctx.save();
             ctx.translate(bW / 2, -paddingY / 2);
-            ctx.rotate(-Math.PI / 2);
+            ctx.rotate(getUICounterRotation());
             ctx.fillText('E', 0, 0);
             ctx.restore();
 
             // W at screen left (board bottom edge)
             ctx.save();
             ctx.translate(bW / 2, bH + paddingY / 2);
-            ctx.rotate(-Math.PI / 2);
+            ctx.rotate(getUICounterRotation());
             ctx.fillText('W', 0, 0);
             ctx.restore();
 
             // Draw title "BATALIA" - position at board's lower-left so it appears at screen's upper-left
             ctx.save();
             ctx.translate(-paddingX / 2 + 45, bH + paddingY / 2 - 15); // Moved lower on screen
-            ctx.rotate(-Math.PI / 2); // Counter-rotate to be readable on screen
+            ctx.rotate(getUICounterRotation()); // Counter-rotate to be readable on screen
             ctx.globalAlpha = 0.8;
             ctx.fillStyle = '#5c3d1e';
             ctx.font = `bold ${32 * scale}px Cinzel`;
@@ -8012,7 +8027,7 @@
             // Draw round counter and turn indicator with team flag on board (top-right of screen)
             ctx.save();
             ctx.translate(bW - 90 * scale, bH - 35 * scale);
-            ctx.rotate(-Math.PI / 2); // Counter-rotate to be readable on screen
+            ctx.rotate(getUICounterRotation()); // Counter-rotate to be readable on screen
             ctx.globalAlpha = 1.0;
 
             // Team colors and info
@@ -8163,7 +8178,7 @@
             // Amber HP (left in board = top on screen)
             ctx.save();
             ctx.translate(barX - 8 * scale, centerY);
-            ctx.rotate(-Math.PI / 2);
+            ctx.rotate(getUICounterRotation());
             ctx.font = `bold ${fontSize}px Cinzel`;
             ctx.fillStyle = '#e8c9a8';
             ctx.textAlign = 'center';
@@ -8174,7 +8189,7 @@
             // Green HP (right in board = bottom on screen)
             ctx.save();
             ctx.translate(barX + barLen + 8 * scale, centerY);
-            ctx.rotate(-Math.PI / 2);
+            ctx.rotate(getUICounterRotation());
             ctx.font = `bold ${fontSize}px Cinzel`;
             ctx.fillStyle = '#c0d4c0';
             ctx.textAlign = 'center';
@@ -8403,7 +8418,7 @@
                     if (hexNum) {
                         ctx.save();
                         ctx.translate(cnt.x, cnt.y);
-                        ctx.rotate(-Math.PI / 2); // Counter-rotate to make text readable
+                        ctx.rotate(getUICounterRotation()); // Counter-rotate to make text readable
                         // Position in lower-right of hex, very close to border
                         const offsetX = HEX_SIZE * scale * 0.52;
                         const offsetY = HEX_SIZE * scale * 0.55;
@@ -8421,7 +8436,7 @@
                     if (isLOSBlocked || hasHiddenEnemy) {
                         ctx.save();
                         ctx.translate(cnt.x, cnt.y);
-                        ctx.rotate(-Math.PI / 2); // Counter-rotate for readability
+                        ctx.rotate(getUICounterRotation()); // Counter-rotate for readability
                         // Position in corner of hex (more to the edge)
                         const eyeRadius = HEX_SIZE * scale * 0.78;
                         const eyeAngle = -1.05; // Position towards upper-right corner
@@ -8583,9 +8598,14 @@
                 ctx.fill();
                 ctx.stroke();
 
-                // Button text - rotate -90° to be readable on screen
+                // Button text - rotate to be readable on screen
                 ctx.translate(btnX + btnBoardWidth / 2, btnY + btnBoardHeight / 2);
-                ctx.rotate(-Math.PI / 2);
+                // Red team has extra 180° board rotation, so counter-rotate text accordingly
+                if (isOnlineGame && myColor === 'red') {
+                    ctx.rotate(Math.PI / 2); // Counter-rotate for 270° board rotation
+                } else {
+                    ctx.rotate(-Math.PI / 2); // Counter-rotate for 90° board rotation
+                }
                 ctx.fillStyle = '#f5e6c8';
                 ctx.font = `600 ${11 * scale}px Cinzel`;
                 ctx.textAlign = 'center';
@@ -8595,11 +8615,19 @@
                 ctx.restore();
 
                 // Convert board coordinates to screen coordinates for click detection
-                // Board rotated 90° CW and shifted left by 60px
+                // Board rotated 90° CW (or 270° for red team) and shifted left by 60px
                 const boardCenterX = btnX + btnBoardWidth / 2;
                 const boardCenterY = btnY + btnBoardHeight / 2;
-                const screenCenterX = canvas.width / 2 - 60 + bH / 2 - boardCenterY;
-                const screenCenterY = canvas.height / 2 + boardCenterX - bW / 2;
+                let screenCenterX, screenCenterY;
+                if (isOnlineGame && myColor === 'red') {
+                    // Red team: 270° rotation (90° + 180°)
+                    screenCenterX = canvas.width / 2 - 60 - bH / 2 + boardCenterY;
+                    screenCenterY = canvas.height / 2 - boardCenterX + bW / 2;
+                } else {
+                    // Green team / local: 90° rotation
+                    screenCenterX = canvas.width / 2 - 60 + bH / 2 - boardCenterY;
+                    screenCenterY = canvas.height / 2 + boardCenterX - bW / 2;
+                }
 
                 // On screen: board's width becomes height, board's height becomes width
                 const screenBtnWidth = btnBoardHeight;  // tall in board = wide on screen
