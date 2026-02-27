@@ -1,13 +1,12 @@
 /**
  * Batalia Multiplayer Server
- * Simple room-based multiplayer using Socket.io
+ * Centralized state management - active player is the source of truth
  */
 
 const express = require('express');
 const http = require('http');
 const { Server } = require('socket.io');
 const cors = require('cors');
-
 const path = require('path');
 
 const app = express();
@@ -30,17 +29,16 @@ const io = new Server(server, {
     pingInterval: 25000
 });
 
-// Store active rooms
+// Store active rooms with authoritative game state
 const rooms = new Map();
 
 // Generate a random 4-character room code
 function generateRoomCode() {
-    const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; // Removed confusing chars (0,O,1,I)
+    const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
     let code = '';
     for (let i = 0; i < 4; i++) {
         code += chars.charAt(Math.floor(Math.random() * chars.length));
     }
-    // Make sure code doesn't already exist
     if (rooms.has(code)) {
         return generateRoomCode();
     }
@@ -60,13 +58,16 @@ io.on('connection', (socket) => {
                 id: socket.id,
                 name: playerName || 'Player 1',
                 color: 'green',
-                ready: false
+                ready: false,
+                connected: true
             },
             guest: null,
             gameStarted: false,
             currentTurn: 'green',
             turnNumber: 1,
-            gameState: null
+            // Authoritative game state - single source of truth
+            gameState: null,
+            stateVersion: 0
         });
 
         socket.join(roomCode);
@@ -106,7 +107,8 @@ io.on('connection', (socket) => {
             id: socket.id,
             name: playerName || 'Player 2',
             color: 'red',
-            ready: false
+            ready: false,
+            connected: true
         };
 
         socket.join(roomCode.toUpperCase());
@@ -115,7 +117,6 @@ io.on('connection', (socket) => {
 
         console.log(`${playerName} joined room ${roomCode}`);
 
-        // Notify host that someone joined
         socket.to(roomCode.toUpperCase()).emit('player-joined', {
             playerName: room.guest.name,
             playerColor: 'red'
@@ -140,9 +141,9 @@ io.on('connection', (socket) => {
             room.guest.ready = true;
         }
 
-        // Check if both players are ready
         if (room.host.ready && room.guest && room.guest.ready) {
             room.gameStarted = true;
+            room.stateVersion = 0;
             io.to(socket.roomCode).emit('game-start', {
                 hostName: room.host.name,
                 guestName: room.guest.name,
@@ -150,19 +151,43 @@ io.on('connection', (socket) => {
             });
             console.log(`Game started in room ${socket.roomCode}`);
         } else {
-            // Notify other player
             socket.to(socket.roomCode).emit('opponent-ready');
         }
 
         if (callback) callback({ success: true });
     });
 
-    // Relay game actions to opponent
+    // Receive and store authoritative state from active player
+    socket.on('update-state', (gameState) => {
+        const room = rooms.get(socket.roomCode);
+        if (!room || !room.gameStarted) return;
+
+        // Only accept state updates from the active player
+        if (socket.playerColor !== room.currentTurn) {
+            console.log(`Rejected state update from ${socket.playerColor} - not their turn`);
+            return;
+        }
+
+        // Update authoritative state
+        room.stateVersion++;
+        room.gameState = {
+            ...gameState,
+            version: room.stateVersion,
+            timestamp: Date.now(),
+            source: socket.playerColor
+        };
+
+        console.log(`State updated in room ${socket.roomCode} v${room.stateVersion} by ${socket.playerColor}`);
+
+        // Broadcast to opponent
+        socket.to(socket.roomCode).emit('state-update', room.gameState);
+    });
+
+    // Relay game actions to opponent (for animations)
     socket.on('game-action', (action) => {
         const room = rooms.get(socket.roomCode);
         if (!room || !room.gameStarted) return;
 
-        // Only allow actions from the player whose turn it is
         if (socket.playerColor !== room.currentTurn) {
             console.log(`Rejected action from ${socket.playerColor} - not their turn`);
             return;
@@ -170,38 +195,65 @@ io.on('connection', (socket) => {
 
         console.log(`Action in room ${socket.roomCode}:`, action.type);
 
-        // Relay action to opponent
+        // Relay action to opponent for animation
         socket.to(socket.roomCode).emit('opponent-action', action);
     });
 
-    // End turn
-    socket.on('end-turn', () => {
+    // End turn - switch control and sync state
+    socket.on('end-turn', (finalState) => {
         const room = rooms.get(socket.roomCode);
         if (!room || !room.gameStarted) return;
 
         if (socket.playerColor !== room.currentTurn) return;
 
+        // Store final state from ending player
+        if (finalState) {
+            room.stateVersion++;
+            room.gameState = {
+                ...finalState,
+                version: room.stateVersion,
+                timestamp: Date.now(),
+                source: socket.playerColor
+            };
+        }
+
         // Switch turn
+        const previousTurn = room.currentTurn;
         room.currentTurn = room.currentTurn === 'green' ? 'red' : 'green';
         if (room.currentTurn === 'green') {
             room.turnNumber++;
         }
 
-        console.log(`Turn ended in room ${socket.roomCode}. Now: ${room.currentTurn}, Turn #${room.turnNumber}`);
+        console.log(`Turn ended in room ${socket.roomCode}. ${previousTurn} -> ${room.currentTurn}, Turn #${room.turnNumber}`);
 
+        // Send turn change with authoritative state
         io.to(socket.roomCode).emit('turn-changed', {
             currentTurn: room.currentTurn,
-            turnNumber: room.turnNumber
+            turnNumber: room.turnNumber,
+            gameState: room.gameState,
+            stateVersion: room.stateVersion
         });
     });
 
-    // Sync game state (for reconnection or validation)
-    socket.on('sync-state', (gameState) => {
+    // Request current authoritative state (for resync)
+    socket.on('request-state', (callback) => {
         const room = rooms.get(socket.roomCode);
-        if (!room) return;
+        if (!room || !room.gameState) {
+            if (callback) callback({ success: false, error: 'No state available' });
+            return;
+        }
 
-        room.gameState = gameState;
-        socket.to(socket.roomCode).emit('state-sync', gameState);
+        console.log(`State requested by ${socket.playerColor} in room ${socket.roomCode}`);
+
+        if (callback) {
+            callback({
+                success: true,
+                gameState: room.gameState,
+                currentTurn: room.currentTurn,
+                turnNumber: room.turnNumber,
+                stateVersion: room.stateVersion
+            });
+        }
     });
 
     // Game over
@@ -211,7 +263,6 @@ io.on('connection', (socket) => {
 
         io.to(socket.roomCode).emit('game-ended', data);
 
-        // Clean up room after a delay
         setTimeout(() => {
             rooms.delete(socket.roomCode);
             console.log(`Room ${socket.roomCode} closed`);
@@ -252,31 +303,24 @@ io.on('connection', (socket) => {
 
         console.log(`Player ${socket.playerColor} disconnected from room ${roomCode}`);
 
-        // Notify other player
         socket.to(roomCode).emit('opponent-disconnected', {
             playerColor: socket.playerColor
         });
 
-        // If game hasn't started, clean up the room
         if (!room.gameStarted) {
             if (socket.playerColor === 'green') {
-                // Host left, destroy room
                 rooms.delete(roomCode);
                 console.log(`Room ${roomCode} destroyed (host left)`);
             } else {
-                // Guest left, just remove them
                 room.guest = null;
             }
         } else {
-            // Game in progress - keep room for potential reconnection
-            // Mark player as disconnected
             if (socket.playerColor === 'green') {
                 room.host.connected = false;
             } else if (room.guest) {
                 room.guest.connected = false;
             }
 
-            // Clean up after 60 seconds if not reconnected
             setTimeout(() => {
                 const currentRoom = rooms.get(roomCode);
                 if (currentRoom) {
@@ -315,7 +359,8 @@ app.get('/rooms', (req, res) => {
             host: room.host.name,
             guest: room.guest?.name || null,
             gameStarted: room.gameStarted,
-            currentTurn: room.currentTurn
+            currentTurn: room.currentTurn,
+            stateVersion: room.stateVersion
         });
     });
     res.json(roomList);

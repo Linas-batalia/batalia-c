@@ -1560,31 +1560,38 @@
                 applyOpponentAction(action);
             });
 
-            // Turn changed
+            // Turn changed - apply authoritative state from server
             socket.on('turn-changed', (data) => {
                 console.log('Turn changed:', data);
                 isMyTurn = (myColor === data.currentTurn);
                 turnNumber = data.turnNumber;
-                // Update activeTeam to match current turn
                 activeTeam = data.currentTurn;
+
                 // Clear any pending interaction state
                 interactionState = 'idle';
                 selectedPiece = null;
                 draggedPiece = null;
+
+                // Apply authoritative state from server
+                if (data.gameState) {
+                    console.log('Applying authoritative state v' + data.stateVersion);
+                    applyAuthoritativeState(data.gameState);
+                }
+
                 if (isMyTurn) {
                     startTurn();
-                    // Send state sync to opponent after starting turn
-                    sendStateSync();
                 } else {
-                    // Opponent's turn - just redraw
                     draw();
                 }
             });
 
-            // Receive state sync from opponent
-            socket.on('state-sync', (gameState) => {
-                console.log('Received state sync');
-                applyStateSync(gameState);
+            // Receive state update from active player (via server)
+            socket.on('state-update', (gameState) => {
+                console.log('Received state update v' + gameState.version);
+                // Only apply if not our turn (opponent's state is authoritative)
+                if (!isMyTurn) {
+                    applyAuthoritativeState(gameState);
+                }
             });
 
             // Opponent disconnected
@@ -1675,6 +1682,9 @@
             buildRecruitSidebar();
             draw();
 
+            // Start periodic state validation
+            startStateValidation();
+
             // Set turn based on color
             if (isMyTurn) {
                 startTurn();
@@ -1723,52 +1733,84 @@
         function sendAction(action) {
             if (!isOnlineGame || !socket) return;
             socket.emit('game-action', action);
+            // After action, send updated state to server
+            sendStateToServer();
         }
 
-        // Send game state sync to opponent
-        function sendStateSync() {
-            if (!isOnlineGame || !socket) return;
-            const gameState = {
+        // Get current game state for serialization
+        function getGameState() {
+            return {
                 pieces: pieces.map(p => ({
                     id: p.id, c: p.c, r: p.r, color: p.color, type: p.type,
                     hp: p.hp, maxHp: p.maxHp, ap: p.ap, maxAp: p.maxAp,
                     rotation: p.rotation, freeTurns: p.freeTurns, hasFought: p.hasFought,
-                    features: p.features, shieldActive: p.shieldActive,
-                    shieldBlockedArchers: p.shieldBlockedArchers, regroupedThisTurn: p.regroupedThisTurn
+                    features: [...(p.features || [])],
+                    shieldActive: p.shieldActive || false,
+                    shieldBlockedArchers: p.shieldBlockedArchers || [],
+                    regroupedThisTurn: p.regroupedThisTurn || false,
+                    regroupCount: p.regroupCount || 0,
+                    engagedWith: p.engagedWith ? p.engagedWith.id : null,
+                    isAggressor: p.isAggressor || false
                 })),
                 turnNumber: turnNumber,
-                centralHexControl: centralHexControl,
+                centralHexControl: { ...centralHexControl },
                 defeatedRed: defeatedRed.map(u => ({ type: u.type })),
                 defeatedGreen: defeatedGreen.map(u => ({ type: u.type }))
             };
-            socket.emit('sync-state', gameState);
         }
 
-        // Apply state sync from opponent
-        function applyStateSync(gameState) {
-            if (!gameState) return;
+        // Send current state to server (active player is source of truth)
+        function sendStateToServer() {
+            if (!isOnlineGame || !socket || !isMyTurn) return;
+            const gameState = getGameState();
+            socket.emit('update-state', gameState);
+        }
 
-            // Update pieces state
-            if (gameState.pieces) {
-                gameState.pieces.forEach(syncP => {
-                    const localP = pieces.find(p => p.id === syncP.id);
-                    if (localP) {
-                        localP.c = syncP.c;
-                        localP.r = syncP.r;
-                        localP.hp = syncP.hp;
-                        localP.ap = syncP.ap;
-                        localP.rotation = syncP.rotation;
-                        localP.freeTurns = syncP.freeTurns;
-                        localP.hasFought = syncP.hasFought;
-                        localP.shieldActive = syncP.shieldActive;
-                        localP.shieldBlockedArchers = syncP.shieldBlockedArchers || [];
-                        localP.regroupedThisTurn = syncP.regroupedThisTurn;
-                    }
-                });
-                // Remove dead pieces that opponent removed
-                const syncIds = new Set(gameState.pieces.map(p => p.id));
-                pieces = pieces.filter(p => syncIds.has(p.id));
-            }
+        // Apply authoritative state from server
+        function applyAuthoritativeState(gameState) {
+            if (!gameState || !gameState.pieces) return;
+
+            // Build ID map for engagement resolution
+            const idToPiece = new Map();
+
+            // First pass: update all pieces
+            gameState.pieces.forEach(syncP => {
+                let localP = pieces.find(p => p.id === syncP.id);
+                if (localP) {
+                    // Update existing piece
+                    localP.c = syncP.c;
+                    localP.r = syncP.r;
+                    localP.hp = syncP.hp;
+                    localP.maxHp = syncP.maxHp;
+                    localP.ap = syncP.ap;
+                    localP.maxAp = syncP.maxAp;
+                    localP.rotation = syncP.rotation;
+                    localP.freeTurns = syncP.freeTurns;
+                    localP.hasFought = syncP.hasFought;
+                    localP.features = [...(syncP.features || [])];
+                    localP.shieldActive = syncP.shieldActive || false;
+                    localP.shieldBlockedArchers = syncP.shieldBlockedArchers || [];
+                    localP.regroupedThisTurn = syncP.regroupedThisTurn || false;
+                    localP.regroupCount = syncP.regroupCount || 0;
+                    localP.isAggressor = syncP.isAggressor || false;
+                    localP._engagedWithId = syncP.engagedWith; // Temp storage
+                    idToPiece.set(localP.id, localP);
+                }
+            });
+
+            // Remove pieces not in sync state
+            const syncIds = new Set(gameState.pieces.map(p => p.id));
+            pieces = pieces.filter(p => syncIds.has(p.id));
+
+            // Second pass: resolve engagements
+            pieces.forEach(p => {
+                if (p._engagedWithId) {
+                    p.engagedWith = idToPiece.get(p._engagedWithId) || null;
+                    delete p._engagedWithId;
+                } else {
+                    p.engagedWith = null;
+                }
+            });
 
             // Update turn number
             if (gameState.turnNumber !== undefined) {
@@ -1777,19 +1819,68 @@
 
             // Update central hex control
             if (gameState.centralHexControl) {
-                centralHexControl = gameState.centralHexControl;
+                centralHexControl = { ...gameState.centralHexControl };
             }
 
             // Update defeated units
             if (gameState.defeatedRed) {
-                defeatedRed = gameState.defeatedRed;
+                defeatedRed = [...gameState.defeatedRed];
             }
             if (gameState.defeatedGreen) {
-                defeatedGreen = gameState.defeatedGreen;
+                defeatedGreen = [...gameState.defeatedGreen];
             }
 
             draw();
-            console.log('State synced from opponent');
+            console.log('Authoritative state applied');
+        }
+
+        // Periodic state validation interval
+        let stateValidationInterval = null;
+
+        // Start periodic state validation (every 3 seconds)
+        function startStateValidation() {
+            if (stateValidationInterval) clearInterval(stateValidationInterval);
+            stateValidationInterval = setInterval(() => {
+                if (!isOnlineGame || !socket) return;
+                // Request current authoritative state from server
+                socket.emit('request-state', (response) => {
+                    if (response && response.success && response.gameState) {
+                        // Check if we're out of sync
+                        const serverState = response.gameState;
+                        const localState = getGameState();
+
+                        // Simple validation: check piece count and positions
+                        if (serverState.pieces && localState.pieces) {
+                            if (serverState.pieces.length !== localState.pieces.length) {
+                                console.log('State mismatch detected! Resyncing...');
+                                applyAuthoritativeState(serverState);
+                            } else {
+                                // Check for position mismatches
+                                let mismatch = false;
+                                for (const sp of serverState.pieces) {
+                                    const lp = localState.pieces.find(p => p.id === sp.id);
+                                    if (!lp || lp.c !== sp.c || lp.r !== sp.r || lp.hp !== sp.hp) {
+                                        mismatch = true;
+                                        break;
+                                    }
+                                }
+                                if (mismatch) {
+                                    console.log('State mismatch detected! Resyncing...');
+                                    applyAuthoritativeState(serverState);
+                                }
+                            }
+                        }
+                    }
+                });
+            }, 3000); // Every 3 seconds
+        }
+
+        // Stop periodic validation
+        function stopStateValidation() {
+            if (stateValidationInterval) {
+                clearInterval(stateValidationInterval);
+                stateValidationInterval = null;
+            }
         }
 
         // Apply opponent's action locally
@@ -4465,92 +4556,54 @@
             ctx.restore();
         }
 
-        // Draw horse head silhouette for knight
+        // Draw chess knight style horse head
         function drawHorseHead(ctx, size, color) {
             ctx.save();
-            const s = size * 0.65; // Scale factor
+            const s = size * 0.55;
 
-            // Horse head silhouette - facing right/forward
+            // Chess knight silhouette - elegant curved shape
             ctx.beginPath();
 
-            // Start from neck bottom
-            ctx.moveTo(-s * 0.3, s * 0.4);
+            // Start from bottom of neck
+            ctx.moveTo(-s * 0.2, s * 0.35);
 
-            // Neck back curve
-            ctx.quadraticCurveTo(-s * 0.35, s * 0.1, -s * 0.25, -s * 0.15);
+            // Back of neck curve up
+            ctx.bezierCurveTo(-s * 0.3, s * 0.1, -s * 0.25, -s * 0.2, -s * 0.15, -s * 0.35);
 
-            // Back of head to ears
-            ctx.quadraticCurveTo(-s * 0.2, -s * 0.35, -s * 0.1, -s * 0.45);
+            // Ear
+            ctx.bezierCurveTo(-s * 0.1, -s * 0.5, s * 0.0, -s * 0.5, s * 0.05, -s * 0.4);
 
-            // First ear
-            ctx.lineTo(-s * 0.05, -s * 0.55);
-            ctx.lineTo(s * 0.0, -s * 0.45);
+            // Forehead
+            ctx.bezierCurveTo(s * 0.15, -s * 0.35, s * 0.25, -s * 0.25, s * 0.3, -s * 0.1);
 
-            // Second ear
-            ctx.lineTo(s * 0.1, -s * 0.55);
-            ctx.lineTo(s * 0.15, -s * 0.4);
+            // Nose
+            ctx.bezierCurveTo(s * 0.35, s * 0.0, s * 0.35, s * 0.15, s * 0.25, s * 0.25);
 
-            // Forehead curve
-            ctx.quadraticCurveTo(s * 0.25, -s * 0.35, s * 0.3, -s * 0.2);
+            // Muzzle bottom
+            ctx.bezierCurveTo(s * 0.15, s * 0.3, s * 0.0, s * 0.3, -s * 0.1, s * 0.35);
 
-            // Face/nose
-            ctx.quadraticCurveTo(s * 0.4, -s * 0.1, s * 0.4, s * 0.05);
-
-            // Muzzle
-            ctx.quadraticCurveTo(s * 0.38, s * 0.15, s * 0.3, s * 0.2);
-
-            // Lower jaw
-            ctx.quadraticCurveTo(s * 0.2, s * 0.25, s * 0.1, s * 0.25);
-
-            // Under jaw to neck
-            ctx.quadraticCurveTo(-s * 0.05, s * 0.3, -s * 0.15, s * 0.35);
-
-            // Back to start
-            ctx.lineTo(-s * 0.3, s * 0.4);
-
+            // Close path
+            ctx.lineTo(-s * 0.2, s * 0.35);
             ctx.closePath();
 
             // Fill with team color
             ctx.fillStyle = color;
             ctx.fill();
 
-            // Draw border
-            ctx.strokeStyle = "#2a1a0a";
-            ctx.lineWidth = 2;
-            ctx.stroke();
-
-            // Draw eye
-            ctx.beginPath();
-            ctx.arc(s * 0.1, -s * 0.15, s * 0.06, 0, Math.PI * 2);
-            ctx.fillStyle = "#2a1a0a";
-            ctx.fill();
-
-            // Eye highlight
-            ctx.beginPath();
-            ctx.arc(s * 0.12, -s * 0.17, s * 0.02, 0, Math.PI * 2);
-            ctx.fillStyle = "#ffffff";
-            ctx.fill();
-
-            // Nostril
-            ctx.beginPath();
-            ctx.ellipse(s * 0.32, s * 0.1, s * 0.03, s * 0.04, 0, 0, Math.PI * 2);
-            ctx.fillStyle = "#2a1a0a";
-            ctx.fill();
-
-            // Mane indication (lines on neck)
-            ctx.beginPath();
-            ctx.moveTo(-s * 0.25, -s * 0.1);
-            ctx.lineTo(-s * 0.15, -s * 0.25);
-            ctx.moveTo(-s * 0.2, s * 0.0);
-            ctx.lineTo(-s * 0.1, -s * 0.15);
-            ctx.moveTo(-s * 0.15, s * 0.1);
-            ctx.lineTo(-s * 0.05, -s * 0.05);
+            // Border
             ctx.strokeStyle = "#2a1a0a";
             ctx.lineWidth = 1.5;
             ctx.stroke();
 
+            // Eye
+            ctx.beginPath();
+            ctx.arc(s * 0.08, -s * 0.12, s * 0.05, 0, Math.PI * 2);
+            ctx.fillStyle = "#2a1a0a";
+            ctx.fill();
+
             ctx.restore();
         }
+
         function drawBowShape(ctx, size, color, ap) {
             ctx.save();
 
@@ -4745,6 +4798,10 @@
             else if (p.type === 'warrior') {
                 // Custom mace in team color
                 drawMaceShape(ctx, size, p.color);
+            }
+            else if (p.type === 'knight' || p.type === 'cavalry' || p.type === 'light_cavalry' || p.type === 'heavy_cavalry') {
+                // Custom horse head for mounted units
+                drawHorseHead(ctx, size, p.color);
             }
             else {
                 // Use icon from UNIT_DATA for all units
@@ -5085,9 +5142,10 @@
             updateTurnUI();
             draw();
 
-            // Online multiplayer: notify server of turn end
+            // Online multiplayer: send final state and notify server of turn end
             if (isOnlineGame && socket) {
-                socket.emit('end-turn');
+                const finalState = getGameState();
+                socket.emit('end-turn', finalState);
                 isMyTurn = false;
                 return; // Wait for server to confirm turn change
             }
