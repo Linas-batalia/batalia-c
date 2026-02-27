@@ -1567,12 +1567,24 @@
                 turnNumber = data.turnNumber;
                 // Update activeTeam to match current turn
                 activeTeam = data.currentTurn;
+                // Clear any pending interaction state
+                interactionState = 'idle';
+                selectedPiece = null;
+                draggedPiece = null;
                 if (isMyTurn) {
                     startTurn();
+                    // Send state sync to opponent after starting turn
+                    sendStateSync();
                 } else {
                     // Opponent's turn - just redraw
                     draw();
                 }
+            });
+
+            // Receive state sync from opponent
+            socket.on('state-sync', (gameState) => {
+                console.log('Received state sync');
+                applyStateSync(gameState);
             });
 
             // Opponent disconnected
@@ -1712,6 +1724,73 @@
             socket.emit('game-action', action);
         }
 
+        // Send game state sync to opponent
+        function sendStateSync() {
+            if (!isOnlineGame || !socket) return;
+            const gameState = {
+                pieces: pieces.map(p => ({
+                    id: p.id, c: p.c, r: p.r, color: p.color, type: p.type,
+                    hp: p.hp, maxHp: p.maxHp, ap: p.ap, maxAp: p.maxAp,
+                    rotation: p.rotation, freeTurns: p.freeTurns, hasFought: p.hasFought,
+                    features: p.features, shieldActive: p.shieldActive,
+                    shieldBlockedArchers: p.shieldBlockedArchers, regroupedThisTurn: p.regroupedThisTurn
+                })),
+                turnNumber: turnNumber,
+                centralHexControl: centralHexControl,
+                defeatedRed: defeatedRed.map(u => ({ type: u.type })),
+                defeatedGreen: defeatedGreen.map(u => ({ type: u.type }))
+            };
+            socket.emit('sync-state', gameState);
+        }
+
+        // Apply state sync from opponent
+        function applyStateSync(gameState) {
+            if (!gameState) return;
+
+            // Update pieces state
+            if (gameState.pieces) {
+                gameState.pieces.forEach(syncP => {
+                    const localP = pieces.find(p => p.id === syncP.id);
+                    if (localP) {
+                        localP.c = syncP.c;
+                        localP.r = syncP.r;
+                        localP.hp = syncP.hp;
+                        localP.ap = syncP.ap;
+                        localP.rotation = syncP.rotation;
+                        localP.freeTurns = syncP.freeTurns;
+                        localP.hasFought = syncP.hasFought;
+                        localP.shieldActive = syncP.shieldActive;
+                        localP.shieldBlockedArchers = syncP.shieldBlockedArchers || [];
+                        localP.regroupedThisTurn = syncP.regroupedThisTurn;
+                    }
+                });
+                // Remove dead pieces that opponent removed
+                const syncIds = new Set(gameState.pieces.map(p => p.id));
+                pieces = pieces.filter(p => syncIds.has(p.id));
+            }
+
+            // Update turn number
+            if (gameState.turnNumber !== undefined) {
+                turnNumber = gameState.turnNumber;
+            }
+
+            // Update central hex control
+            if (gameState.centralHexControl) {
+                centralHexControl = gameState.centralHexControl;
+            }
+
+            // Update defeated units
+            if (gameState.defeatedRed) {
+                defeatedRed = gameState.defeatedRed;
+            }
+            if (gameState.defeatedGreen) {
+                defeatedGreen = gameState.defeatedGreen;
+            }
+
+            draw();
+            console.log('State synced from opponent');
+        }
+
         // Apply opponent's action locally
         function applyOpponentAction(action) {
             console.log('Applying opponent action:', action.type);
@@ -1719,6 +1798,9 @@
             switch (action.type) {
                 case 'move':
                     applyOpponentMove(action);
+                    break;
+                case 'move-attack':
+                    applyOpponentMoveAttack(action);
                     break;
                 case 'attack':
                     applyOpponentAttack(action);
@@ -1778,6 +1860,20 @@
                     draw();
                 });
             }
+        }
+
+        function applyOpponentMoveAttack(action) {
+            const unit = findUnitById(action.unitId);
+            const defender = findUnitById(action.defenderId);
+            if (!unit || !defender) return;
+
+            // Animate movement first, then attack
+            startMovementAnimation(unit, action.moveToC, action.moveToR, action.moveCost, () => {
+                const s = getHexCenter(action.moveToC, action.moveToR);
+                const t = getHexCenter(defender.c, defender.r);
+                unit.rotation = snapRotation(Math.atan2(t.y - s.y, t.x - s.x));
+                startMeleeCombat(unit, defender, true);
+            });
         }
 
         function applyOpponentAttack(action) {
@@ -4365,6 +4461,93 @@
             ctx.stroke();
             ctx.restore();
         }
+
+        // Draw horse head silhouette for knight
+        function drawHorseHead(ctx, size, color) {
+            ctx.save();
+            const s = size * 0.65; // Scale factor
+
+            // Horse head silhouette - facing right/forward
+            ctx.beginPath();
+
+            // Start from neck bottom
+            ctx.moveTo(-s * 0.3, s * 0.4);
+
+            // Neck back curve
+            ctx.quadraticCurveTo(-s * 0.35, s * 0.1, -s * 0.25, -s * 0.15);
+
+            // Back of head to ears
+            ctx.quadraticCurveTo(-s * 0.2, -s * 0.35, -s * 0.1, -s * 0.45);
+
+            // First ear
+            ctx.lineTo(-s * 0.05, -s * 0.55);
+            ctx.lineTo(s * 0.0, -s * 0.45);
+
+            // Second ear
+            ctx.lineTo(s * 0.1, -s * 0.55);
+            ctx.lineTo(s * 0.15, -s * 0.4);
+
+            // Forehead curve
+            ctx.quadraticCurveTo(s * 0.25, -s * 0.35, s * 0.3, -s * 0.2);
+
+            // Face/nose
+            ctx.quadraticCurveTo(s * 0.4, -s * 0.1, s * 0.4, s * 0.05);
+
+            // Muzzle
+            ctx.quadraticCurveTo(s * 0.38, s * 0.15, s * 0.3, s * 0.2);
+
+            // Lower jaw
+            ctx.quadraticCurveTo(s * 0.2, s * 0.25, s * 0.1, s * 0.25);
+
+            // Under jaw to neck
+            ctx.quadraticCurveTo(-s * 0.05, s * 0.3, -s * 0.15, s * 0.35);
+
+            // Back to start
+            ctx.lineTo(-s * 0.3, s * 0.4);
+
+            ctx.closePath();
+
+            // Fill with team color
+            ctx.fillStyle = color;
+            ctx.fill();
+
+            // Draw border
+            ctx.strokeStyle = "#2a1a0a";
+            ctx.lineWidth = 2;
+            ctx.stroke();
+
+            // Draw eye
+            ctx.beginPath();
+            ctx.arc(s * 0.1, -s * 0.15, s * 0.06, 0, Math.PI * 2);
+            ctx.fillStyle = "#2a1a0a";
+            ctx.fill();
+
+            // Eye highlight
+            ctx.beginPath();
+            ctx.arc(s * 0.12, -s * 0.17, s * 0.02, 0, Math.PI * 2);
+            ctx.fillStyle = "#ffffff";
+            ctx.fill();
+
+            // Nostril
+            ctx.beginPath();
+            ctx.ellipse(s * 0.32, s * 0.1, s * 0.03, s * 0.04, 0, 0, Math.PI * 2);
+            ctx.fillStyle = "#2a1a0a";
+            ctx.fill();
+
+            // Mane indication (lines on neck)
+            ctx.beginPath();
+            ctx.moveTo(-s * 0.25, -s * 0.1);
+            ctx.lineTo(-s * 0.15, -s * 0.25);
+            ctx.moveTo(-s * 0.2, s * 0.0);
+            ctx.lineTo(-s * 0.1, -s * 0.15);
+            ctx.moveTo(-s * 0.15, s * 0.1);
+            ctx.lineTo(-s * 0.05, -s * 0.05);
+            ctx.strokeStyle = "#2a1a0a";
+            ctx.lineWidth = 1.5;
+            ctx.stroke();
+
+            ctx.restore();
+        }
         function drawBowShape(ctx, size, color, ap) {
             ctx.save();
 
@@ -4560,12 +4743,17 @@
                 // Custom mace in team color
                 drawMaceShape(ctx, size, p.color);
             }
+            else if (p.type === 'knight' || p.type === 'cavalry' || p.type === 'light_cavalry' || p.type === 'heavy_cavalry') {
+                // Custom horse head for mounted units
+                drawHorseHead(ctx, size, p.color);
+            }
             else {
                 // Use icon from UNIT_DATA for all units
                 const uIcon = (UNIT_DATA[p.type] && UNIT_DATA[p.type].icon) || '?';
                 ctx.textAlign = "center";
                 ctx.textBaseline = "middle";
-                ctx.font = `bold ${size*0.8}px Arial`;
+                // Use font stack that supports emojis across all platforms
+                ctx.font = `bold ${size*0.8}px "Segoe UI Emoji", "Apple Color Emoji", "Noto Color Emoji", Arial`;
                 // General horse is tinted white (blend of white and team color) with team color border
                 ctx.fillStyle = p.color;
                 ctx.fillText(uIcon, 0, 0);
@@ -4682,14 +4870,20 @@
             ctx.translate(drawX, drawY);
             ctx.rotate((ghost.rotation || 0) + Math.PI/2);
 
-            const uIcon = (UNIT_DATA[ghost.type] && UNIT_DATA[ghost.type].icon) || '?';
-            ctx.textAlign = "center";
-            ctx.textBaseline = "middle";
-            ctx.font = `bold ${size * 0.9}px Arial`;
-
-            // Apply greyscale effect by using filter
+            // Apply greyscale effect
             ctx.filter = 'grayscale(100%) opacity(50%)';
-            ctx.fillText(uIcon, 0, 0);
+            ctx.globalAlpha = 0.5;
+
+            // Use custom drawing for mounted units
+            if (ghost.type === 'knight' || ghost.type === 'cavalry' || ghost.type === 'light_cavalry' || ghost.type === 'heavy_cavalry') {
+                drawHorseHead(ctx, size * 0.9, '#888888');
+            } else {
+                const uIcon = (UNIT_DATA[ghost.type] && UNIT_DATA[ghost.type].icon) || '?';
+                ctx.textAlign = "center";
+                ctx.textBaseline = "middle";
+                ctx.font = `bold ${size * 0.9}px "Segoe UI Emoji", "Apple Color Emoji", "Noto Color Emoji", Arial`;
+                ctx.fillText(uIcon, 0, 0);
+            }
             ctx.filter = 'none';
 
             // Draw question mark overlay to indicate uncertainty
@@ -7047,7 +7241,15 @@
             dragStartPos = { x: e.clientX, y: e.clientY };
             if (hit) {
                 const p = pieces.find(x => x.c === hit.c && x.r === hit.r);
-                if (p && (p.color === RCOL ? 'red' : 'green') === activeTeam) {
+                // In online mode, only allow selecting own pieces during own turn
+                let canSelect = false;
+                if (isOnlineGame) {
+                    const myColorCode = (myColor === 'red') ? RCOL : GCOL;
+                    canSelect = p && p.color === myColorCode && isMyTurn;
+                } else {
+                    canSelect = p && (p.color === RCOL ? 'red' : 'green') === activeTeam;
+                }
+                if (canSelect) {
                     selectedPiece = p;
                     interactionState = 'potential_drag';
                     playSound('select');
@@ -7263,19 +7465,43 @@
                         let apAfterMove = movedViaNeighbor ? draggedPiece.ap : (draggedPiece.ap - moveCost);
 
                         if (apAfterMove >= attackCost) {
-                            if (!movedViaNeighbor && manualPath.length > 0) {
-                                draggedPiece.c = last.c; draggedPiece.r = last.r; draggedPiece.ap -= moveCost;
-                            }
-                            const s = getHexCenter(last.c, last.r), t = getHexCenter(target.c, target.r);
-                            draggedPiece.rotation = snapRotation(Math.atan2(t.y - s.y, t.x - s.x));
-                            startMeleeCombat(draggedPiece, target); draggedPiece.ap -= attackCost; transitioning = true;
-                            // Send attack action to server (multiplayer)
-                            if (isOnlineGame && isMyTurn) {
-                                sendAction({
-                                    type: 'attack',
-                                    attackerId: draggedPiece.id,
-                                    defenderId: target.id
+                            // Check if we need to move first
+                            const needsMove = !movedViaNeighbor && manualPath.length > 0;
+                            const moveFromC = draggedPiece.c;
+                            const moveFromR = draggedPiece.r;
+
+                            if (needsMove) {
+                                // Send move+attack action to server (multiplayer)
+                                if (isOnlineGame && isMyTurn) {
+                                    sendAction({
+                                        type: 'move-attack',
+                                        unitId: draggedPiece.id,
+                                        moveToC: last.c,
+                                        moveToR: last.r,
+                                        moveCost: moveCost,
+                                        defenderId: target.id
+                                    });
+                                }
+                                // Animate movement first, then attack
+                                startMovementAnimation(draggedPiece, last.c, last.r, moveCost, () => {
+                                    const s = getHexCenter(last.c, last.r), t = getHexCenter(target.c, target.r);
+                                    draggedPiece.rotation = snapRotation(Math.atan2(t.y - s.y, t.x - s.x));
+                                    draggedPiece.ap -= attackCost;
+                                    startMeleeCombat(draggedPiece, target);
                                 });
+                                transitioning = true;
+                            } else {
+                                const s = getHexCenter(last.c, last.r), t = getHexCenter(target.c, target.r);
+                                draggedPiece.rotation = snapRotation(Math.atan2(t.y - s.y, t.x - s.x));
+                                startMeleeCombat(draggedPiece, target); draggedPiece.ap -= attackCost; transitioning = true;
+                                // Send attack action to server (multiplayer)
+                                if (isOnlineGame && isMyTurn) {
+                                    sendAction({
+                                        type: 'attack',
+                                        attackerId: draggedPiece.id,
+                                        defenderId: target.id
+                                    });
+                                }
                             }
                         }
                     }
@@ -7909,13 +8135,17 @@
             // Draw unit icon
             ctx.globalAlpha = 0.8;
             ctx.fillStyle = color;
-            ctx.font = `bold ${size * 0.9}px Arial`;
-            ctx.textAlign = 'center';
-            ctx.textBaseline = 'middle';
 
-            let icon = (UNIT_DATA[type] && UNIT_DATA[type].icon) ? UNIT_DATA[type].icon : '?';
-
-            ctx.fillText(icon, 0, 1);
+            // Use custom drawing for mounted units
+            if (type === 'knight' || type === 'cavalry' || type === 'light_cavalry' || type === 'heavy_cavalry') {
+                drawHorseHead(ctx, size * 1.1, color);
+            } else {
+                ctx.font = `bold ${size * 0.9}px "Segoe UI Emoji", "Apple Color Emoji", "Noto Color Emoji", Arial`;
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                let icon = (UNIT_DATA[type] && UNIT_DATA[type].icon) ? UNIT_DATA[type].icon : '?';
+                ctx.fillText(icon, 0, 1);
+            }
             ctx.restore();
         }
 
@@ -8005,9 +8235,15 @@
             ctx.fillText('W', 0, 0);
             ctx.restore();
 
-            // Draw title "BATALIA" - position at board's lower-left so it appears at screen's upper-left
+            // Draw title "BATALIA" - position depends on board rotation
             ctx.save();
-            ctx.translate(-paddingX / 2 + 45, bH + paddingY / 2 - 15); // Moved lower on screen
+            if (isOnlineGame && myColor === 'red') {
+                // Red team: board rotated 270°, position at board's upper-right for screen's upper-left
+                ctx.translate(bW + paddingX / 2 - 45, -paddingY / 2 + 15);
+            } else {
+                // Green team / local: board rotated 90°, position at board's lower-left for screen's upper-left
+                ctx.translate(-paddingX / 2 + 45, bH + paddingY / 2 - 15);
+            }
             ctx.rotate(getUICounterRotation()); // Counter-rotate to be readable on screen
             ctx.globalAlpha = 0.8;
             ctx.fillStyle = '#5c3d1e';
@@ -8026,7 +8262,13 @@
 
             // Draw round counter and turn indicator with team flag on board (top-right of screen)
             ctx.save();
-            ctx.translate(bW - 90 * scale, bH - 35 * scale);
+            if (isOnlineGame && myColor === 'red') {
+                // Red team: position for 270° rotation
+                ctx.translate(90 * scale, 35 * scale);
+            } else {
+                // Green team / local: position for 90° rotation
+                ctx.translate(bW - 90 * scale, bH - 35 * scale);
+            }
             ctx.rotate(getUICounterRotation()); // Counter-rotate to be readable on screen
             ctx.globalAlpha = 1.0;
 
