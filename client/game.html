@@ -604,7 +604,7 @@
     <button id="show-victory-btn" class="play-again-btn" style="display: none; position: fixed; top: 20px; left: 50%; transform: translateX(-50%); z-index: 999; background: linear-gradient(180deg, #8b6914 0%, #6b5a3a 100%); border: 2px solid #d4a857; padding: 10px 20px;" onclick="toggleVictoryOverlay()">⚔ Show Results</button>
 
     <!-- Replay Controls -->
-    <div id="replay-controls" style="display: none; position: fixed; bottom: 30px; left: 50%; transform: translateX(-50%); z-index: 1001; background: linear-gradient(180deg, rgba(232, 213, 183, 0.98) 0%, rgba(212, 196, 168, 0.98) 100%); padding: 15px 25px; border-radius: 12px; border: 2px solid #8b6914; box-shadow: 0 4px 20px rgba(0,0,0,0.4); display: flex; gap: 12px; align-items: center; flex-wrap: wrap; justify-content: center; max-width: 90vw;">
+    <div id="replay-controls" style="display: none; position: fixed; bottom: 30px; left: 50%; transform: translateX(-50%); z-index: 1001; background: linear-gradient(180deg, rgba(232, 213, 183, 0.98) 0%, rgba(212, 196, 168, 0.98) 100%); padding: 15px 25px; border-radius: 12px; border: 2px solid #8b6914; box-shadow: 0 4px 20px rgba(0,0,0,0.4); gap: 12px; align-items: center; flex-wrap: wrap; justify-content: center; max-width: 90vw;">
         <div style="display: flex; gap: 8px; align-items: center;">
             <button class="replay-btn" onclick="replayFirst()" title="First">⏮</button>
             <button class="replay-btn" onclick="replayPrev()" title="Previous">⏪</button>
@@ -1666,8 +1666,9 @@
             gameMode = 'pvp'; // Use PvP logic but with network sync
             gameVersion = selectedGameVersion;
 
-            // Hide menu
+            // Hide menu and replay controls (should not appear in online mode)
             document.querySelector('.start-overlay').classList.add('hidden');
+            document.getElementById('replay-controls').style.display = 'none';
 
             // Initialize game
             initGame();
@@ -1872,7 +1873,8 @@
                 const s = getHexCenter(action.moveToC, action.moveToR);
                 const t = getHexCenter(defender.c, defender.r);
                 unit.rotation = snapRotation(Math.atan2(t.y - s.y, t.x - s.x));
-                startMeleeCombat(unit, defender, true);
+                // false = normal attack (attacker strikes first)
+                startMeleeCombat(unit, defender, false);
             });
         }
 
@@ -1881,7 +1883,8 @@
             const defender = findUnitById(action.defenderId);
             if (!attacker || !defender) return;
 
-            startMeleeCombat(attacker, defender, true);
+            // false = normal attack (attacker strikes first)
+            startMeleeCombat(attacker, defender, false);
         }
 
         function applyOpponentShoot(action) {
@@ -4743,10 +4746,6 @@
                 // Custom mace in team color
                 drawMaceShape(ctx, size, p.color);
             }
-            else if (p.type === 'knight' || p.type === 'cavalry' || p.type === 'light_cavalry' || p.type === 'heavy_cavalry') {
-                // Custom horse head for mounted units
-                drawHorseHead(ctx, size, p.color);
-            }
             else {
                 // Use icon from UNIT_DATA for all units
                 const uIcon = (UNIT_DATA[p.type] && UNIT_DATA[p.type].icon) || '?';
@@ -4874,16 +4873,11 @@
             ctx.filter = 'grayscale(100%) opacity(50%)';
             ctx.globalAlpha = 0.5;
 
-            // Use custom drawing for mounted units
-            if (ghost.type === 'knight' || ghost.type === 'cavalry' || ghost.type === 'light_cavalry' || ghost.type === 'heavy_cavalry') {
-                drawHorseHead(ctx, size * 0.9, '#888888');
-            } else {
-                const uIcon = (UNIT_DATA[ghost.type] && UNIT_DATA[ghost.type].icon) || '?';
-                ctx.textAlign = "center";
-                ctx.textBaseline = "middle";
-                ctx.font = `bold ${size * 0.9}px "Segoe UI Emoji", "Apple Color Emoji", "Noto Color Emoji", Arial`;
-                ctx.fillText(uIcon, 0, 0);
-            }
+            const uIcon = (UNIT_DATA[ghost.type] && UNIT_DATA[ghost.type].icon) || '?';
+            ctx.textAlign = "center";
+            ctx.textBaseline = "middle";
+            ctx.font = `bold ${size * 0.9}px "Segoe UI Emoji", "Apple Color Emoji", "Noto Color Emoji", Arial`;
+            ctx.fillText(uIcon, 0, 0);
             ctx.filter = 'none';
 
             // Draw question mark overlay to indicate uncertainty
@@ -7828,8 +7822,8 @@
             const flagScale = scale * 0.8;
 
             ctx.save();
-            // Offset flag lower on the hex to stay within bounds
-            const yOffset = HEX_SIZE * scale * 0.15;
+            // Offset flag lower on the hex to stay within bounds and not overlap canvas
+            const yOffset = HEX_SIZE * scale * 0.35;
             ctx.translate(cnt.x, cnt.y + yOffset);
             ctx.rotate(getUICounterRotation()); // Counter-rotate for readability
 
@@ -8135,17 +8129,11 @@
             // Draw unit icon
             ctx.globalAlpha = 0.8;
             ctx.fillStyle = color;
-
-            // Use custom drawing for mounted units
-            if (type === 'knight' || type === 'cavalry' || type === 'light_cavalry' || type === 'heavy_cavalry') {
-                drawHorseHead(ctx, size * 1.1, color);
-            } else {
-                ctx.font = `bold ${size * 0.9}px "Segoe UI Emoji", "Apple Color Emoji", "Noto Color Emoji", Arial`;
-                ctx.textAlign = 'center';
-                ctx.textBaseline = 'middle';
-                let icon = (UNIT_DATA[type] && UNIT_DATA[type].icon) ? UNIT_DATA[type].icon : '?';
-                ctx.fillText(icon, 0, 1);
-            }
+            ctx.font = `bold ${size * 0.9}px "Segoe UI Emoji", "Apple Color Emoji", "Noto Color Emoji", Arial`;
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            let icon = (UNIT_DATA[type] && UNIT_DATA[type].icon) ? UNIT_DATA[type].icon : '?';
+            ctx.fillText(icon, 0, 1);
             ctx.restore();
         }
 
@@ -8805,10 +8793,17 @@
             inGameButtons.length = 0;
 
             buttons.forEach((btn, index) => {
-                // Position at board's upper-right area (appears at screen's lower-right)
-                // Stack buttons horizontally in board space (vertically on screen)
-                const btnX = bW + padding - marginFromEdge - (buttons.length - index) * (btnBoardWidth + btnGap);
-                const btnY = -padding + marginFromEdge;
+                // Position buttons - for red team, position at opposite side
+                let btnX, btnY;
+                if (isOnlineGame && myColor === 'red') {
+                    // Red team: position at board's lower-left (appears at screen's lower-right after 270° rotation)
+                    btnX = -padding + marginFromEdge + index * (btnBoardWidth + btnGap);
+                    btnY = bH + padding - marginFromEdge - btnBoardHeight;
+                } else {
+                    // Green team / local: position at board's upper-right (appears at screen's lower-right)
+                    btnX = bW + padding - marginFromEdge - (buttons.length - index) * (btnBoardWidth + btnGap);
+                    btnY = -padding + marginFromEdge;
+                }
 
                 const isHovered = hoveredButton === btn.id;
 
