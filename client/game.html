@@ -271,7 +271,16 @@
         .spawn-btn.active { border-color: #8b6914; background: #d4a857; color: #3d2914; box-shadow: inset 0 2px 4px rgba(0,0,0,0.1); }
 
         /* Start Menu - Old Map Theme */
-        .start-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: linear-gradient(135deg, #2a1a0a 0%, #3d2914 30%, #5c3d1e 50%, #3d2914 70%, #2a1a0a 100%); display: flex; align-items: center; justify-content: center; z-index: 2000; transition: opacity 0.8s ease-out, visibility 0.8s; overflow: hidden; }
+        .start-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: linear-gradient(135deg, #2a1a0a 0%, #3d2914 30%, #5c3d1e 50%, #3d2914 70%, #2a1a0a 100%); display: flex; align-items: center; justify-content: center; z-index: 2000; transition: opacity 0.8s ease-out, visibility 0.8s; overflow: auto; }
+        @media (max-width: 768px), (max-height: 700px) {
+            .start-overlay { align-items: flex-start; padding-top: 60px; padding-bottom: 30px; }
+            .start-menu h1 { font-size: 2.5rem; letter-spacing: 6px; }
+            .start-menu .subtitle { font-size: 1rem; margin: 10px 0 20px 0; }
+            .start-menu .menu-section { padding: 20px 25px; }
+            .mode-select { flex-direction: column; gap: 10px; }
+            .mode-select-btn { padding: 15px 20px; }
+            .mode-select-btn .mode-icon { font-size: 1.8rem; margin-bottom: 8px; }
+        }
         .start-overlay::before { content: ''; position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: url("data:image/svg+xml,%3Csvg viewBox='0 0 400 400' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E"); opacity: 0.08; pointer-events: none; }
         .start-overlay.hidden { opacity: 0; visibility: hidden; pointer-events: none; }
         .start-menu { text-align: center; color: #e8d5b7; position: relative; z-index: 1; animation: fadeInUp 1s ease-out; }
@@ -4070,8 +4079,11 @@
             // Use screen dimensions (not canvas dimensions which are scaled by DPR)
             const screenWidth = window.innerWidth;
             const screenHeight = window.innerHeight;
-            // Account for board shift left by 60px for rules panel
-            const cx = screenWidth/2 - 60, cy = screenHeight/2, dx = px - cx, dy = py - cy;
+            // On mobile, account for top offset to avoid browser header
+            const isMobileView = screenWidth < 768 || ('ontouchstart' in window);
+            const topOffset = isMobileView ? 30 : 0;
+            // Account for board shift left by 60px for rules panel and top offset
+            const cx = screenWidth/2 - 60, cy = screenHeight/2 + topOffset, dx = px - cx, dy = py - cy;
             // Standard rotation is 90° (ca=0, sa=-1)
             // Red team in online mode has extra 180° rotation (ca=0, sa=1)
             let ca = 0, sa = -1;
@@ -8031,20 +8043,22 @@
 
         // Old map background drawing
         function drawMapBackground() {
+            // Use screen dimensions for positioning
+            const sw = window.innerWidth, sh = window.innerHeight;
             // Main background - darker parchment/leather
-            const gradient = ctx.createRadialGradient(canvas.width/2, canvas.height/2, 0, canvas.width/2, canvas.height/2, Math.max(canvas.width, canvas.height));
+            const gradient = ctx.createRadialGradient(sw/2, sh/2, 0, sw/2, sh/2, Math.max(sw, sh));
             gradient.addColorStop(0, '#5c3d1e');
             gradient.addColorStop(0.5, '#4a3018');
             gradient.addColorStop(1, '#3d2914');
             ctx.fillStyle = gradient;
-            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            ctx.fillRect(0, 0, sw, sh);
 
             // Add noise texture effect
             ctx.save();
             ctx.globalAlpha = 0.03;
             for (let i = 0; i < 2000; i++) {
-                const x = Math.random() * canvas.width;
-                const y = Math.random() * canvas.height;
+                const x = Math.random() * sw;
+                const y = Math.random() * sh;
                 const size = Math.random() * 2 + 0.5;
                 ctx.fillStyle = Math.random() > 0.5 ? '#2a1a0a' : '#8b6914';
                 ctx.fillRect(x, y, size, size);
@@ -8057,11 +8071,11 @@
             ctx.lineWidth = 3;
             ctx.globalAlpha = 0.4;
             const margin = 15;
-            ctx.strokeRect(margin, margin, canvas.width - margin*2, canvas.height - margin*2);
+            ctx.strokeRect(margin, margin, sw - margin*2, sh - margin*2);
             ctx.strokeStyle = '#d4a857';
             ctx.lineWidth = 1;
             ctx.globalAlpha = 0.3;
-            ctx.strokeRect(margin + 5, margin + 5, canvas.width - margin*2 - 10, canvas.height - margin*2 - 10);
+            ctx.strokeRect(margin + 5, margin + 5, sw - margin*2 - 10, sh - margin*2 - 10);
             ctx.restore();
 
             // Corner decorations
@@ -8073,21 +8087,21 @@
             ctx.fillRect(margin - 2, margin - 2, cornerSize, 4);
             ctx.fillRect(margin - 2, margin - 2, 4, cornerSize);
             // Top-right
-            ctx.fillRect(canvas.width - margin - cornerSize + 2, margin - 2, cornerSize, 4);
-            ctx.fillRect(canvas.width - margin - 2, margin - 2, 4, cornerSize);
+            ctx.fillRect(sw - margin - cornerSize + 2, margin - 2, cornerSize, 4);
+            ctx.fillRect(sw - margin - 2, margin - 2, 4, cornerSize);
             // Bottom-left
-            ctx.fillRect(margin - 2, canvas.height - margin - 2, cornerSize, 4);
-            ctx.fillRect(margin - 2, canvas.height - margin - cornerSize + 2, 4, cornerSize);
+            ctx.fillRect(margin - 2, sh - margin - 2, cornerSize, 4);
+            ctx.fillRect(margin - 2, sh - margin - cornerSize + 2, 4, cornerSize);
             // Bottom-right
-            ctx.fillRect(canvas.width - margin - cornerSize + 2, canvas.height - margin - 2, cornerSize, 4);
-            ctx.fillRect(canvas.width - margin - 2, canvas.height - margin - cornerSize + 2, 4, cornerSize);
+            ctx.fillRect(sw - margin - cornerSize + 2, sh - margin - 2, cornerSize, 4);
+            ctx.fillRect(sw - margin - 2, sh - margin - cornerSize + 2, 4, cornerSize);
             ctx.restore();
         }
 
         // Draw old-map style compass rose (Demo mode only)
         function drawCompass() {
-            // Position on the right side of canvas, inside the board area
-            const cx = canvas.width - 80;
+            // Position on the right side of screen, inside the board area
+            const cx = window.innerWidth - 80;
             const cy = 70;
             const size = 35;
 
@@ -8787,6 +8801,9 @@
 
         function draw() {
             ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.clearRect(0, 0, canvas.width, canvas.height);
+            // Re-apply DPR scaling after reset
+            const dpr = window.devicePixelRatio || 1;
+            ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
 
             // Draw old map background
             drawMapBackground();
@@ -8822,7 +8839,12 @@
             if (isOnlineGame && myColor === 'red') {
                 boardRotation += Math.PI; // Add 180 degrees for red team
             }
-            ctx.save(); ctx.translate(canvas.width / 2 - 60, canvas.height / 2); ctx.rotate(boardRotation); ctx.translate(-bW / 2, -bH / 2);
+            // Use screen dimensions (not canvas dimensions which are DPR-scaled)
+            const screenW = window.innerWidth, screenH = window.innerHeight;
+            // On mobile, add top offset to avoid browser header
+            const isMobileView = screenW < 768 || ('ontouchstart' in window);
+            const topOffset = isMobileView ? 30 : 0;
+            ctx.save(); ctx.translate(screenW / 2 - 60, screenH / 2 + topOffset); ctx.rotate(boardRotation); ctx.translate(-bW / 2, -bH / 2);
 
             // Draw parchment board area first
             drawBoardParchment();
@@ -9222,14 +9244,17 @@
                 const boardCenterX = btnX + btnBoardWidth / 2;
                 const boardCenterY = btnY + btnBoardHeight / 2;
                 let screenCenterX, screenCenterY;
+                // On mobile, account for top offset
+                const isMobileView = window.innerWidth < 768 || ('ontouchstart' in window);
+                const topOffset = isMobileView ? 30 : 0;
                 if (isOnlineGame && myColor === 'red') {
                     // Red team: 270° rotation (90° + 180°)
-                    screenCenterX = canvas.width / 2 - 60 - bH / 2 + boardCenterY;
-                    screenCenterY = canvas.height / 2 - boardCenterX + bW / 2;
+                    screenCenterX = window.innerWidth / 2 - 60 - bH / 2 + boardCenterY;
+                    screenCenterY = window.innerHeight / 2 + topOffset - boardCenterX + bW / 2;
                 } else {
                     // Green team / local: 90° rotation
-                    screenCenterX = canvas.width / 2 - 60 + bH / 2 - boardCenterY;
-                    screenCenterY = canvas.height / 2 + boardCenterX - bW / 2;
+                    screenCenterX = window.innerWidth / 2 - 60 + bH / 2 - boardCenterY;
+                    screenCenterY = window.innerHeight / 2 + topOffset + boardCenterX - bW / 2;
                 }
 
                 // On screen: board's width becomes height, board's height becomes width
