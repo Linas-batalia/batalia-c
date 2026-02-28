@@ -273,13 +273,14 @@
         /* Start Menu - Old Map Theme */
         .start-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: linear-gradient(135deg, #2a1a0a 0%, #3d2914 30%, #5c3d1e 50%, #3d2914 70%, #2a1a0a 100%); display: flex; align-items: center; justify-content: center; z-index: 2000; transition: opacity 0.8s ease-out, visibility 0.8s; overflow: auto; }
         @media (max-width: 768px), (max-height: 700px) {
-            .start-overlay { align-items: flex-start; padding-top: 60px; padding-bottom: 30px; }
-            .start-menu h1 { font-size: 2.5rem; letter-spacing: 6px; }
-            .start-menu .subtitle { font-size: 1rem; margin: 10px 0 20px 0; }
-            .start-menu .menu-section { padding: 20px 25px; }
-            .mode-select { flex-direction: column; gap: 10px; }
-            .mode-select-btn { padding: 15px 20px; }
-            .mode-select-btn .mode-icon { font-size: 1.8rem; margin-bottom: 8px; }
+            .start-overlay { align-items: flex-start; padding-top: 120px; padding-bottom: 40px; }
+            .start-menu h1 { font-size: 2.2rem; letter-spacing: 5px; }
+            .start-menu .subtitle { font-size: 0.9rem; margin: 8px 0 15px 0; }
+            .start-menu .menu-section { padding: 15px 20px; }
+            .mode-select { flex-direction: column; gap: 8px; }
+            .mode-select-btn { padding: 12px 15px; }
+            .mode-select-btn .mode-icon { font-size: 1.5rem; margin-bottom: 6px; }
+            .start-btn { padding: 15px 30px; font-size: 1.1rem; }
         }
         .start-overlay::before { content: ''; position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: url("data:image/svg+xml,%3Csvg viewBox='0 0 400 400' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E"); opacity: 0.08; pointer-events: none; }
         .start-overlay.hidden { opacity: 0; visibility: hidden; pointer-events: none; }
@@ -1793,11 +1794,15 @@
         }
 
         // Send action to server
-        function sendAction(action) {
+        // For combat actions, we defer state sync until animation completes
+        function sendAction(action, deferStateSync = false) {
             if (!isOnlineGame || !socket) return;
             socket.emit('game-action', action);
-            // After action, send updated state to server
-            sendStateToServer();
+            // Only sync state immediately for non-combat actions
+            // Combat actions should call sendStateToServer() after animation completes
+            if (!deferStateSync) {
+                sendStateToServer();
+            }
         }
 
         // Get current game state for serialization
@@ -4901,7 +4906,7 @@
                 drawMaceShape(ctx, size, p.color);
             }
             else if (p.type === 'knight' || p.type === 'cavalry' || p.type === 'light_cavalry' || p.type === 'heavy_cavalry') {
-                // Draw knight image with team color tinting
+                // Draw knight image with team color tinting (flipped horizontally)
                 if (knightImgLoaded) {
                     const imgSize = size * 0.85;
                     const yOffset = -size * 0.12; // Move higher to avoid HP overlap
@@ -4910,9 +4915,13 @@
                     offscreen.width = imgSize;
                     offscreen.height = imgSize;
                     const offCtx = offscreen.getContext('2d');
-                    // Draw the original image
+                    // Flip horizontally: scale -1 on x-axis and translate
+                    offCtx.translate(imgSize, 0);
+                    offCtx.scale(-1, 1);
+                    // Draw the original image (will be flipped)
                     offCtx.drawImage(knightImg, 0, 0, imgSize, imgSize);
-                    // Apply team color tint
+                    // Reset transform and apply team color tint
+                    offCtx.setTransform(1, 0, 0, 1, 0, 0);
                     offCtx.globalCompositeOperation = 'source-atop';
                     offCtx.fillStyle = p.color;
                     offCtx.fillRect(0, 0, imgSize, imgSize);
@@ -6895,6 +6904,10 @@
                     }
                     removeDeadUnits();
                     activeCombat = null; interactionState = 'idle'; draw();
+                    // Sync state to server after combat completes (for deferred combat actions)
+                    if (isOnlineGame && isMyTurn) {
+                        sendStateToServer();
+                    }
                     // Check victory after combat
                     const winner = checkVictory();
                     if (winner) { showVictory(winner); }
@@ -7184,6 +7197,10 @@
             if (activeProjectiles.length > 0) {
                 requestAnimationFrame(animateProjectiles);
             } else {
+                // Sync state to server after all projectiles resolved (for deferred shoot actions)
+                if (isOnlineGame && isMyTurn) {
+                    sendStateToServer();
+                }
                 // Check victory after all projectiles resolved
                 const winner = checkVictory();
                 if (winner) { showVictory(winner); }
@@ -7206,13 +7223,13 @@
                 if (agg) {
                     saveStateForUndo();
                     selectedPiece.ap = 0;
-                    // Send defend action to server (multiplayer)
+                    // Send defend action to server (multiplayer) - defer state sync until combat completes
                     if (isOnlineGame && isMyTurn) {
                         sendAction({
                             type: 'defend',
                             defenderId: selectedPiece.id,
                             attackerId: agg.id
-                        });
+                        }, true);
                     }
                     startMeleeCombat(agg, selectedPiece, true);
                 }
@@ -7226,13 +7243,13 @@
                     selectedPiece.ap = 0;
                     selectedPiece.isAggressor = true;
                     agg.isAggressor = false;
-                    // Send counter action to server (multiplayer)
+                    // Send counter action to server (multiplayer) - defer state sync until combat completes
                     if (isOnlineGame && isMyTurn) {
                         sendAction({
                             type: 'counter',
                             counterId: selectedPiece.id,
                             attackerId: agg.id
-                        });
+                        }, true);
                     }
                     startMeleeCombat(selectedPiece, agg, false);
                 }
@@ -7538,20 +7555,20 @@
                                 moveSelectUnit.c = bestAdjacent.c;
                                 moveSelectUnit.r = bestAdjacent.r;
                             }
-                            moveSelectUnit.ap -= (bestAdjacent.moveCost + bestAdjacent.attackCost);
+                            moveSelectUnit.ap = Math.max(0, moveSelectUnit.ap - (bestAdjacent.moveCost + bestAdjacent.attackCost));
 
                             // Face the target
                             const tPos = getHexCenter(targetPiece.c, targetPiece.r);
                             const uPos = getHexCenter(moveSelectUnit.c, moveSelectUnit.r);
                             moveSelectUnit.rotation = snapRotation(Math.atan2(tPos.y - uPos.y, tPos.x - uPos.x));
 
-                            // Send attack action to server (multiplayer)
+                            // Send attack action to server (multiplayer) - defer state sync until combat completes
                             if (isOnlineGame && isMyTurn) {
                                 sendAction({
                                     type: 'attack',
                                     attackerId: moveSelectUnit.id,
                                     defenderId: targetPiece.id
-                                });
+                                }, true);
                             }
 
                             startMeleeCombat(moveSelectUnit, targetPiece, false);
@@ -7799,7 +7816,7 @@
                             const moveFromR = draggedPiece.r;
 
                             if (needsMove) {
-                                // Send move+attack action to server (multiplayer)
+                                // Send move+attack action to server (multiplayer) - defer state sync until combat completes
                                 if (isOnlineGame && isMyTurn) {
                                     sendAction({
                                         type: 'move-attack',
@@ -7808,27 +7825,27 @@
                                         moveToR: last.r,
                                         moveCost: moveCost,
                                         defenderId: target.id
-                                    });
+                                    }, true);
                                 }
                                 // Animate movement first, then attack
                                 startMovementAnimation(draggedPiece, last.c, last.r, moveCost, () => {
                                     const s = getHexCenter(last.c, last.r), t = getHexCenter(target.c, target.r);
                                     draggedPiece.rotation = snapRotation(Math.atan2(t.y - s.y, t.x - s.x));
-                                    draggedPiece.ap -= attackCost;
+                                    draggedPiece.ap = Math.max(0, draggedPiece.ap - attackCost);
                                     startMeleeCombat(draggedPiece, target);
                                 });
                                 transitioning = true;
                             } else {
                                 const s = getHexCenter(last.c, last.r), t = getHexCenter(target.c, target.r);
                                 draggedPiece.rotation = snapRotation(Math.atan2(t.y - s.y, t.x - s.x));
-                                startMeleeCombat(draggedPiece, target); draggedPiece.ap -= attackCost; transitioning = true;
-                                // Send attack action to server (multiplayer)
+                                startMeleeCombat(draggedPiece, target); draggedPiece.ap = Math.max(0, draggedPiece.ap - attackCost); transitioning = true;
+                                // Send attack action to server (multiplayer) - defer state sync until combat completes
                                 if (isOnlineGame && isMyTurn) {
                                     sendAction({
                                         type: 'attack',
                                         attackerId: draggedPiece.id,
                                         defenderId: target.id
-                                    });
+                                    }, true);
                                 }
                             }
                         }
@@ -7902,11 +7919,13 @@
                 checkCentralHexCapture();
             } else if (interactionState === 'aim_shoot' && hoveredHex && selectedPiece) {
                 const dist = (Math.abs(oddRToCube(selectedPiece.c, selectedPiece.r).q - oddRToCube(hoveredHex.c, hoveredHex.r).q) + Math.abs(oddRToCube(selectedPiece.c, selectedPiece.r).r - oddRToCube(hoveredHex.c, hoveredHex.r).r) + Math.abs(oddRToCube(selectedPiece.c, selectedPiece.r).s - oddRToCube(hoveredHex.c, hoveredHex.r).s))/2;
-                // Check range (with uphill penalty), AP, and Line of Sight (Demo mode only)
+                // Check range (with uphill penalty), AP, distance > 0 (no self-shoot), and Line of Sight
                 const effectiveRange = getEffectiveShootRange(selectedPiece, hoveredHex.c, hoveredHex.r);
-                if (dist <= effectiveRange && selectedPiece.ap >= 1 && hasLineOfSight(selectedPiece.c, selectedPiece.r, hoveredHex.c, hoveredHex.r)) {
+                // Must have valid enemy target at hex
+                const targetAtHex = pieces.find(p => p.c === hoveredHex.c && p.r === hoveredHex.r && p.hp > 0 && p.color !== selectedPiece.color);
+                if (dist > 0 && dist <= effectiveRange && selectedPiece.ap >= 1 && targetAtHex && hasLineOfSight(selectedPiece.c, selectedPiece.r, hoveredHex.c, hoveredHex.r)) {
                     saveStateForUndo();
-                    // Send shoot action to server before handling (multiplayer)
+                    // Send shoot action to server before handling (multiplayer) - defer state sync until projectile hits
                     if (isOnlineGame && isMyTurn) {
                         const targetUnit = pieces.find(p => p.c === hoveredHex.c && p.r === hoveredHex.r && p.hp > 0);
                         if (targetUnit) {
@@ -7914,7 +7933,7 @@
                                 type: 'shoot',
                                 shooterId: selectedPiece.id,
                                 targetId: targetUnit.id
-                            });
+                            }, true);
                         }
                     }
                     handleShoot(selectedPiece, hoveredHex);
