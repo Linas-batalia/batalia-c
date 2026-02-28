@@ -1906,26 +1906,40 @@
         let stateValidationInterval = null;
 
         // Start periodic state validation (every 3 seconds)
+        // Key principle: Active player (whose turn it is) is ALWAYS authoritative
+        // - If it's MY turn: I push my state to server (my local state is truth)
+        // - If it's NOT my turn: I accept server state (opponent's state is truth)
         function startStateValidation() {
             if (stateValidationInterval) clearInterval(stateValidationInterval);
             stateValidationInterval = setInterval(() => {
                 if (!isOnlineGame || !socket) return;
-                // Request current authoritative state from server
+
+                // If it's MY turn, I am authoritative - push my state to server
+                if (isMyTurn) {
+                    // Don't push during combat/projectile animations - wait for them to complete
+                    if (!activeCombat && activeProjectiles.length === 0) {
+                        sendStateToServer();
+                        console.log('Validation: My turn - pushed local state to server');
+                    }
+                    return;
+                }
+
+                // If it's NOT my turn, server (opponent's state) is authoritative
+                // Request current state from server and apply if different
                 socket.emit('request-state', (response) => {
                     if (response && response.success && response.gameState) {
-                        // Check if we're out of sync
                         const serverState = response.gameState;
                         const localState = getGameState();
 
-                        // Comprehensive validation: check piece count and all properties
+                        // Check for any differences and apply server state
                         if (serverState.pieces && localState.pieces) {
+                            let mismatch = false;
+                            let mismatchDetails = '';
+
                             if (serverState.pieces.length !== localState.pieces.length) {
-                                console.log('State mismatch: piece count differs! Resyncing...');
-                                applyAuthoritativeState(serverState);
+                                mismatch = true;
+                                mismatchDetails = 'Piece count differs';
                             } else {
-                                // Check for any property mismatches
-                                let mismatch = false;
-                                let mismatchDetails = '';
                                 for (const sp of serverState.pieces) {
                                     const lp = localState.pieces.find(p => p.id === sp.id);
                                     if (!lp) {
@@ -1933,41 +1947,27 @@
                                         mismatchDetails = `Unit ${sp.id} not found locally`;
                                         break;
                                     }
-                                    // Check position (coordinates)
                                     if (lp.c !== sp.c || lp.r !== sp.r) {
                                         mismatch = true;
                                         mismatchDetails = `Unit ${sp.id} position: local(${lp.c},${lp.r}) vs server(${sp.c},${sp.r})`;
                                         break;
                                     }
-                                    // Check HP
                                     if (lp.hp !== sp.hp) {
                                         mismatch = true;
                                         mismatchDetails = `Unit ${sp.id} HP: local ${lp.hp} vs server ${sp.hp}`;
                                         break;
                                     }
-                                    // Check AP
                                     if (lp.ap !== sp.ap) {
                                         mismatch = true;
                                         mismatchDetails = `Unit ${sp.id} AP: local ${lp.ap} vs server ${sp.ap}`;
                                         break;
                                     }
-                                    // Check rotation (with small tolerance for floating point)
-                                    if (Math.abs(lp.rotation - sp.rotation) > 0.01) {
-                                        mismatch = true;
-                                        mismatchDetails = `Unit ${sp.id} rotation: local ${lp.rotation.toFixed(2)} vs server ${sp.rotation.toFixed(2)}`;
-                                        break;
-                                    }
-                                    // Check engaged state
-                                    if (lp.engagedWith !== sp.engagedWith) {
-                                        mismatch = true;
-                                        mismatchDetails = `Unit ${sp.id} engagement differs`;
-                                        break;
-                                    }
                                 }
-                                if (mismatch) {
-                                    console.log('State mismatch detected:', mismatchDetails, 'Resyncing...');
-                                    applyAuthoritativeState(serverState);
-                                }
+                            }
+
+                            if (mismatch) {
+                                console.log('Validation: Not my turn - applying server state:', mismatchDetails);
+                                applyAuthoritativeState(serverState);
                             }
                         }
                     }
