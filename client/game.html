@@ -880,6 +880,12 @@
         let arrowImgLoaded = false;
         arrowImg.onload = () => { arrowImgLoaded = true; };
 
+        // ===== KNIGHT/HORSE IMAGE =====
+        const knightImg = new Image();
+        knightImg.src = 'images/knight_option3_black.png';
+        let knightImgLoaded = false;
+        knightImg.onload = () => { knightImgLoaded = true; };
+
         // ===== SOUND SYSTEM =====
         let soundEnabled = true;
         let audioCtx = null;
@@ -4864,8 +4870,26 @@
                 drawMaceShape(ctx, size, p.color);
             }
             else if (p.type === 'knight' || p.type === 'cavalry' || p.type === 'light_cavalry' || p.type === 'heavy_cavalry') {
-                // Custom horse head for mounted units
-                drawHorseHead(ctx, size, p.color);
+                // Draw knight image with team color tinting
+                if (knightImgLoaded) {
+                    const imgSize = size * 0.9;
+                    // Use offscreen canvas for color tinting
+                    const offscreen = document.createElement('canvas');
+                    offscreen.width = imgSize;
+                    offscreen.height = imgSize;
+                    const offCtx = offscreen.getContext('2d');
+                    // Draw the original image
+                    offCtx.drawImage(knightImg, 0, 0, imgSize, imgSize);
+                    // Apply team color tint
+                    offCtx.globalCompositeOperation = 'source-atop';
+                    offCtx.fillStyle = p.color;
+                    offCtx.fillRect(0, 0, imgSize, imgSize);
+                    // Draw tinted image to main canvas
+                    ctx.drawImage(offscreen, -imgSize/2, -imgSize/2);
+                } else {
+                    // Fallback to drawn horse head if image not loaded
+                    drawHorseHead(ctx, size, p.color);
+                }
             }
             else {
                 // Use icon from UNIT_DATA for all units
@@ -7254,28 +7278,64 @@
         };
 
         function resize() {
-            canvas.width = window.innerWidth; canvas.height = window.innerHeight;
-            // sW = left sidebar, rulesW = right rules panel
-            const sW = 200, rulesW = 290, hH = 100;
-            const aW = Math.max(200, canvas.width - sW - rulesW), aH = Math.max(200, canvas.height - hH);
-            const rW = (BOARD_COLS + 0.5) * (Math.sqrt(3) * HEX_SIZE), rH = (BOARD_ROWS * 0.75 + 0.25) * (2 * HEX_SIZE);
-            // Include parchment padding in scale calculation so background fits on screen
-            // paddingY (1.92x) is along board Y → screen width after 90° rotation
-            // paddingX (1.05x) is along board X → screen height after rotation
+            // Support high-DPI displays
+            const dpr = window.devicePixelRatio || 1;
+            const screenWidth = window.innerWidth;
+            const screenHeight = window.innerHeight;
+
+            // Detect mobile (screen width < 768px or touch device)
+            const isMobile = screenWidth < 768 || ('ontouchstart' in window);
+
+            canvas.width = screenWidth * dpr;
+            canvas.height = screenHeight * dpr;
+            canvas.style.width = screenWidth + 'px';
+            canvas.style.height = screenHeight + 'px';
+            // Reset transform and apply DPR scaling
+            ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+
+            // On mobile, use full screen for game (hide panels)
+            let sW, rulesW, hH;
+            if (isMobile) {
+                sW = 0;      // No left sidebar
+                rulesW = 0;  // No rules panel
+                hH = 50;     // Minimal header
+                // Hide panels on mobile
+                const rulesPanel = document.querySelector('.rules-panel');
+                const recruitSidebar = document.getElementById('recruit-sidebar');
+                if (rulesPanel) rulesPanel.style.display = 'none';
+                if (recruitSidebar) recruitSidebar.classList.add('hidden');
+            } else {
+                sW = 200;
+                rulesW = 290;
+                hH = 100;
+                const rulesPanel = document.querySelector('.rules-panel');
+                if (rulesPanel) rulesPanel.style.display = '';
+            }
+
+            const aW = Math.max(200, screenWidth - sW - rulesW);
+            const aH = Math.max(200, screenHeight - hH);
+            const rW = (BOARD_COLS + 0.5) * (Math.sqrt(3) * HEX_SIZE);
+            const rH = (BOARD_ROWS * 0.75 + 0.25) * (2 * HEX_SIZE);
+
+            // Include parchment padding in scale calculation
             const padBase = HEX_SIZE * 0.8;
-            const effectiveH = rH + 2 * padBase * 1.92; // screen width
-            const effectiveW = rW + 2 * padBase * 1.05; // screen height
-            scale = Math.min(aW / effectiveH, aH / effectiveW) * 0.9;
+            const effectiveH = rH + 2 * padBase * 1.92;
+            const effectiveW = rW + 2 * padBase * 1.05;
+
+            // On mobile, use more aggressive scaling to fill screen
+            const scaleFactor = isMobile ? 0.95 : 0.9;
+            scale = Math.min(aW / effectiveH, aH / effectiveW) * scaleFactor;
             if (!scale || scale < 0) scale = 1;
             bW = rW * scale; bH = rH * scale;
 
-            // Position rules panel side-by-side with board (accounting for parchment padding)
-            // Board is centered at canvas.width/2 - 60, rotated 90°, so bH is screen width
-            const parchmentPaddingY = HEX_SIZE * scale * 0.8 * 1.92;
-            const boardRightEdge = canvas.width / 2 - 60 + bH / 2 + parchmentPaddingY;
-            const rulesPanel = document.querySelector('.rules-panel');
-            if (rulesPanel) {
-                rulesPanel.style.left = (boardRightEdge + 15) + 'px';
+            // Position rules panel side-by-side with board (desktop only)
+            if (!isMobile) {
+                const parchmentPaddingY = HEX_SIZE * scale * 0.8 * 1.92;
+                const boardRightEdge = screenWidth / 2 - 60 + bH / 2 + parchmentPaddingY;
+                const rulesPanel = document.querySelector('.rules-panel');
+                if (rulesPanel) {
+                    rulesPanel.style.left = (boardRightEdge + 15) + 'px';
+                }
             }
 
             draw();
@@ -7894,6 +7954,36 @@
             } else { interactionState = 'idle'; }
             draggedPiece = null; manualPath = []; manualPathCost = 0; reachableHexes.clear(); draw();
         };
+
+        // Touch event support for mobile devices
+        canvas.addEventListener('touchstart', (e) => {
+            e.preventDefault();
+            const touch = e.touches[0];
+            const mouseEvent = new MouseEvent('mousedown', {
+                clientX: touch.clientX,
+                clientY: touch.clientY
+            });
+            canvas.dispatchEvent(mouseEvent);
+        }, { passive: false });
+
+        canvas.addEventListener('touchmove', (e) => {
+            e.preventDefault();
+            const touch = e.touches[0];
+            const mouseEvent = new MouseEvent('mousemove', {
+                clientX: touch.clientX,
+                clientY: touch.clientY
+            });
+            canvas.dispatchEvent(mouseEvent);
+        }, { passive: false });
+
+        canvas.addEventListener('touchend', (e) => {
+            e.preventDefault();
+            const mouseEvent = new MouseEvent('mouseup', {
+                clientX: e.changedTouches[0].clientX,
+                clientY: e.changedTouches[0].clientY
+            });
+            canvas.dispatchEvent(mouseEvent);
+        }, { passive: false });
 
         function showMenu(x, y, p) {
             menuEl.style.display = 'flex'; menuEl.style.left = x + 'px'; menuEl.style.top = y + 'px';
