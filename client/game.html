@@ -12,8 +12,8 @@
         .controls { position: absolute; top: 15px; text-align: center; pointer-events: none; z-index: 10; }
         
         /* UI Colors - Old Map Theme */
-        .action-menu { position: absolute; display: none; flex-direction: row; gap: 8px; background: linear-gradient(180deg, #e8d5b7 0%, #d4c4a8 100%); padding: 12px; border-radius: 8px; box-shadow: 0 10px 25px rgba(0,0,0,0.4); z-index: 200; pointer-events: auto; transform: translate(-50%, -100%); margin-top: -15px; border: 2px solid #8b6914; }
-        .action-btn { border: 2px solid; padding: 8px 12px; border-radius: 6px; font-weight: bold; cursor: pointer; transition: all 0.1s; font-size: 0.85rem; display: flex; align-items: center; gap: 4px; white-space: nowrap; font-family: 'Cinzel', serif; }
+        .action-menu { position: absolute; display: none; flex-direction: column; gap: 6px; background: linear-gradient(180deg, #e8d5b7 0%, #d4c4a8 100%); padding: 10px; border-radius: 8px; box-shadow: 0 10px 25px rgba(0,0,0,0.4); z-index: 200; pointer-events: auto; transform: translate(-50%, -100%); margin-top: -15px; border: 2px solid #8b6914; min-width: 120px; }
+        .action-btn { border: 2px solid; padding: 8px 12px; border-radius: 6px; font-weight: bold; cursor: pointer; transition: all 0.1s; font-size: 0.85rem; display: flex; align-items: center; justify-content: center; gap: 4px; white-space: nowrap; font-family: 'Cinzel', serif; width: 100%; box-sizing: border-box; }
         .unit-tooltip { position: fixed; background: linear-gradient(180deg, #2a1a0a 0%, #3d2914 100%); color: #e8d5b7; padding: 10px 14px; border-radius: 8px; font-family: 'Cinzel', serif; font-size: 0.85rem; pointer-events: none; z-index: 300; box-shadow: 0 4px 15px rgba(0,0,0,0.5); border: 2px solid #8b6914; max-width: 200px; }
         .unit-tooltip .tooltip-name { font-weight: bold; font-size: 1rem; color: #d4a857; margin-bottom: 5px; }
         .unit-tooltip .tooltip-stats { color: #c9b896; margin-bottom: 4px; }
@@ -503,9 +503,17 @@
                     <div class="menu-label" style="margin-top:15px;">🌐 Online Multiplayer</div>
                     <div id="online-connect" style="margin-bottom: 10px;">
                         <input type="text" id="player-name-input" placeholder="Your name" maxlength="15" class="online-input" style="width: 100%; margin-bottom: 8px;">
-                        <input type="text" id="server-url-input" placeholder="Server URL (default: localhost:3000)" class="online-input" style="width: 100%; margin-bottom: 8px; font-size: 0.8rem;">
+                        <input type="text" id="server-url-input" placeholder="Server URL (leave empty for default)" class="online-input" style="width: 100%; margin-bottom: 8px; font-size: 0.8rem;">
                     </div>
                     <div id="online-lobby" style="display: flex; flex-direction: column; gap: 8px;">
+                        <div style="display: flex; gap: 8px; align-items: center; margin-bottom: 4px;">
+                            <span style="color: #a89070; font-size: 0.85rem;">Game Mode:</span>
+                            <select id="online-game-version" class="online-input" style="flex: 1; padding: 6px;">
+                                <option value="classic">Classic</option>
+                                <option value="arcade">Arcade</option>
+                                <option value="demo">Demo (Terrain)</option>
+                            </select>
+                        </div>
                         <button class="diff-btn" onclick="createRoom()" style="width: 100%;">🏠 Create Room</button>
                         <div style="display: flex; gap: 8px;">
                             <input type="text" id="room-code-input" placeholder="Room Code" maxlength="4" class="online-input" style="flex: 1; text-transform: uppercase;">
@@ -515,11 +523,13 @@
                     <div id="online-waiting" style="display: none; text-align: center;">
                         <div class="menu-label" style="margin: 10px 0;">Room Code:</div>
                         <div id="room-code-display" style="font-size: 2rem; font-weight: bold; color: #d4a857; letter-spacing: 8px; margin: 10px 0;"></div>
+                        <div id="room-mode-display" style="color: #4ade80; font-size: 0.9rem; margin: 5px 0;"></div>
                         <div id="online-status" style="color: #a89070; font-style: italic;">Waiting for opponent...</div>
                         <button class="diff-btn" onclick="leaveRoom()" style="margin-top: 15px;">Cancel</button>
                     </div>
                     <div id="online-ready" style="display: none; text-align: center;">
                         <div style="color: #4ade80; margin: 10px 0;">✓ <span id="opponent-name">Opponent</span> joined!</div>
+                        <div id="join-mode-display" style="color: #d4a857; font-size: 0.9rem; margin: 5px 0;"></div>
                         <div id="your-color-display" style="margin: 10px 0;"></div>
                         <button class="diff-btn selected" onclick="playerReady()" style="width: 100%;">Ready to Play</button>
                         <div id="ready-status" style="color: #a89070; font-style: italic; margin-top: 8px;"></div>
@@ -627,14 +637,17 @@
     </div>
 
     <div id="actionMenu" class="action-menu">
+        <button id="btn-move-action" class="action-btn btn-move" onclick="triggerAction('move')">Move</button>
         <button id="btn-shoot-action" class="action-btn btn-shoot" onclick="triggerAction('shoot')">Shoot</button>
         <button id="btn-defend-action" class="action-btn btn-defend" onclick="triggerAction('defend')">Defend</button>
         <button id="btn-retreat-action" class="action-btn btn-retreat" onclick="triggerAction('retreat')">Retreat</button>
         <button id="btn-counter-action" class="action-btn btn-counter" onclick="triggerAction('counter')">Counterattack</button>
         <button id="btn-regroup-action" class="action-btn btn-regroup" onclick="triggerAction('regroup')">Regroup</button>
         <button id="btn-shield-action" class="action-btn btn-shield" onclick="triggerAction('shield')">Shield</button>
-        <button class="action-btn btn-rotate" onclick="triggerAction('rotateLeft')">↺</button>
-        <button class="action-btn btn-rotate" onclick="triggerAction('rotateRight')">↻</button>
+        <div style="display: flex; gap: 6px; width: 100%;">
+            <button class="action-btn btn-rotate" onclick="triggerAction('rotateLeft')" style="flex: 1;">↺</button>
+            <button class="action-btn btn-rotate" onclick="triggerAction('rotateRight')" style="flex: 1;">↻</button>
+        </div>
     </div>
 
     <!-- Unit Setup Overlay (Arcade/Demo modes) -->
@@ -1257,6 +1270,7 @@
         let mouseX = -1, mouseY = -1, hoveredHex = null;
         let draggedPiece = null, selectedPiece = null;
         let interactionState = 'idle';
+        let moveSelectUnit = null; // For mobile-friendly tap-to-move mode
         let dragStartPos = { x: 0, y: 0 };
         let manualPath = [];
         let manualPathCost = 0;
@@ -1489,9 +1503,9 @@
         function getServerUrl() {
             const input = document.getElementById('server-url-input');
             let url = input.value.trim();
-            if (!url) url = 'http://localhost:3000';
+            if (!url) url = 'https://batalia-c.onrender.com';
             if (!url.startsWith('http://') && !url.startsWith('https://')) {
-                url = 'http://' + url;
+                url = 'https://' + url;
             }
             return url;
         }
@@ -1551,6 +1565,10 @@
                 console.log('Game starting:', data);
                 isOnlineGame = true;
                 isMyTurn = (myColor === 'green');
+                // Use game version from server (authoritative from host)
+                if (data.gameVersion) {
+                    onlineGameVersion = data.gameVersion;
+                }
                 startOnlineGame();
             });
 
@@ -1609,15 +1627,23 @@
             });
         }
 
+        // Store the online game version selected by host
+        let onlineGameVersion = 'classic';
+
         window.createRoom = () => {
+            // Get selected game version
+            onlineGameVersion = document.getElementById('online-game-version').value;
+            const modeNames = { classic: 'Classic', arcade: 'Arcade', demo: 'Demo (Terrain)' };
+
             connectToServer(() => {
-                socket.emit('create-room', getPlayerName(), (response) => {
+                socket.emit('create-room', { playerName: getPlayerName(), gameVersion: onlineGameVersion }, (response) => {
                     if (response.success) {
                         roomCode = response.roomCode;
                         myColor = response.playerColor;
                         document.getElementById('online-lobby').style.display = 'none';
                         document.getElementById('online-waiting').style.display = 'block';
                         document.getElementById('room-code-display').textContent = roomCode;
+                        document.getElementById('room-mode-display').textContent = 'Mode: ' + modeNames[onlineGameVersion];
                         document.getElementById('your-color-display').innerHTML =
                             'You are <span style="color: #3d6b40; font-weight: bold;">GREEN</span> (moves first)';
                     } else {
@@ -1634,15 +1660,19 @@
                 return;
             }
 
+            const modeNames = { classic: 'Classic', arcade: 'Arcade', demo: 'Demo (Terrain)' };
+
             connectToServer(() => {
                 socket.emit('join-room', { roomCode: code, playerName: getPlayerName() }, (response) => {
                     if (response.success) {
                         roomCode = response.roomCode;
                         myColor = response.playerColor;
                         opponentName = response.hostName;
+                        onlineGameVersion = response.gameVersion || 'classic';
                         document.getElementById('online-lobby').style.display = 'none';
                         document.getElementById('online-ready').style.display = 'block';
                         document.getElementById('opponent-name').textContent = opponentName;
+                        document.getElementById('join-mode-display').textContent = 'Mode: ' + modeNames[onlineGameVersion];
                         document.getElementById('your-color-display').innerHTML =
                             'You are <span style="color: #a85d1e; font-weight: bold;">AMBER</span>';
                     } else {
@@ -1671,7 +1701,9 @@
             // Close the menu and start the game
             selectedMenuMode = 'online';
             gameMode = 'pvp'; // Use PvP logic but with network sync
-            gameVersion = selectedGameVersion;
+            gameVersion = onlineGameVersion; // Use game version selected by host
+
+            console.log('Starting online game with version:', gameVersion);
 
             // Hide menu and replay controls (should not appear in online mode)
             document.querySelector('.start-overlay').classList.add('hidden');
@@ -1849,23 +1881,55 @@
                         const serverState = response.gameState;
                         const localState = getGameState();
 
-                        // Simple validation: check piece count and positions
+                        // Comprehensive validation: check piece count and all properties
                         if (serverState.pieces && localState.pieces) {
                             if (serverState.pieces.length !== localState.pieces.length) {
-                                console.log('State mismatch detected! Resyncing...');
+                                console.log('State mismatch: piece count differs! Resyncing...');
                                 applyAuthoritativeState(serverState);
                             } else {
-                                // Check for position mismatches
+                                // Check for any property mismatches
                                 let mismatch = false;
+                                let mismatchDetails = '';
                                 for (const sp of serverState.pieces) {
                                     const lp = localState.pieces.find(p => p.id === sp.id);
-                                    if (!lp || lp.c !== sp.c || lp.r !== sp.r || lp.hp !== sp.hp) {
+                                    if (!lp) {
                                         mismatch = true;
+                                        mismatchDetails = `Unit ${sp.id} not found locally`;
+                                        break;
+                                    }
+                                    // Check position (coordinates)
+                                    if (lp.c !== sp.c || lp.r !== sp.r) {
+                                        mismatch = true;
+                                        mismatchDetails = `Unit ${sp.id} position: local(${lp.c},${lp.r}) vs server(${sp.c},${sp.r})`;
+                                        break;
+                                    }
+                                    // Check HP
+                                    if (lp.hp !== sp.hp) {
+                                        mismatch = true;
+                                        mismatchDetails = `Unit ${sp.id} HP: local ${lp.hp} vs server ${sp.hp}`;
+                                        break;
+                                    }
+                                    // Check AP
+                                    if (lp.ap !== sp.ap) {
+                                        mismatch = true;
+                                        mismatchDetails = `Unit ${sp.id} AP: local ${lp.ap} vs server ${sp.ap}`;
+                                        break;
+                                    }
+                                    // Check rotation (with small tolerance for floating point)
+                                    if (Math.abs(lp.rotation - sp.rotation) > 0.01) {
+                                        mismatch = true;
+                                        mismatchDetails = `Unit ${sp.id} rotation: local ${lp.rotation.toFixed(2)} vs server ${sp.rotation.toFixed(2)}`;
+                                        break;
+                                    }
+                                    // Check engaged state
+                                    if (lp.engagedWith !== sp.engagedWith) {
+                                        mismatch = true;
+                                        mismatchDetails = `Unit ${sp.id} engagement differs`;
                                         break;
                                     }
                                 }
                                 if (mismatch) {
-                                    console.log('State mismatch detected! Resyncing...');
+                                    console.log('State mismatch detected:', mismatchDetails, 'Resyncing...');
                                     applyAuthoritativeState(serverState);
                                 }
                             }
@@ -4665,7 +4729,7 @@
             if (p.color === activeColor && p.ap <= 0 && interactionState !== 'drag' && interactionState !== 'animating') {
                 ctx.globalAlpha = 0.5;
             }
-            if (selectedPiece === p) { ctx.save(); ctx.beginPath(); ctx.arc(center.x, center.y, size * 0.85, 0, Math.PI * 2); ctx.strokeStyle = "rgba(99, 102, 241, 0.5)"; ctx.lineWidth = 3; ctx.setLineDash([5, 3]); ctx.stroke(); ctx.restore(); }
+            if (selectedPiece === p || moveSelectUnit === p) { ctx.save(); ctx.beginPath(); ctx.arc(center.x, center.y, size * 0.85, 0, Math.PI * 2); ctx.strokeStyle = moveSelectUnit === p ? "rgba(74, 222, 128, 0.7)" : "rgba(99, 102, 241, 0.5)"; ctx.lineWidth = 3; ctx.setLineDash([5, 3]); ctx.stroke(); ctx.restore(); }
 
             let drawX = center.x, drawY = center.y;
             let drawRotation = rotation;
@@ -7072,7 +7136,14 @@
         
         window.triggerAction = (act) => {
             if (!selectedPiece) return;
-            if (act === 'move') { draggedPiece = selectedPiece; manualPath = []; manualPathCost = 0; reachableHexes = calculateReachable(draggedPiece); interactionState = 'drag'; closeMenu(); }
+            if (act === 'move') {
+                // Mobile-friendly move mode: show reachable hexes and wait for tap/click on destination
+                moveSelectUnit = selectedPiece;
+                reachableHexes = calculateReachable(selectedPiece);
+                interactionState = 'move_select';
+                closeMenu();
+                draw();
+            }
             else if (act === 'shoot') { interactionState = 'aim_shoot'; closeMenu(); }
             else if (act === 'defend') {
                 const agg = selectedPiece.engagedWith;
@@ -7290,6 +7361,119 @@
                 if (winner) { showVictory(winner); }
                 return;
             }
+            // Mobile-friendly tap-to-move mode: click on destination hex
+            if (interactionState === 'move_select' && moveSelectUnit && hit) {
+                const key = `${hit.c},${hit.r}`;
+                const reachData = reachableHexes.get(key);
+                if (reachData) {
+                    // Valid move destination - calculate path and execute move
+                    const targetPiece = pieces.find(p => p.c === hit.c && p.r === hit.r && p.hp > 0);
+                    if (!targetPiece) {
+                        // Move to empty hex
+                        saveStateForUndo();
+                        const path = reachData.path;
+                        const cost = Math.ceil(reachData.cost);
+
+                        // Animate the movement
+                        const startPos = getHexCenter(moveSelectUnit.c, moveSelectUnit.r);
+                        const endPos = getHexCenter(hit.c, hit.r);
+
+                        moveSelectUnit.c = hit.c;
+                        moveSelectUnit.r = hit.r;
+                        moveSelectUnit.ap -= cost;
+
+                        // Face toward movement direction
+                        if (path && path.length > 0) {
+                            const lastStep = path[path.length - 1];
+                            const prevStep = path.length > 1 ? path[path.length - 2] : { c: moveSelectUnit.c, r: moveSelectUnit.r };
+                            const ang = Math.atan2(endPos.y - startPos.y, endPos.x - startPos.x);
+                            moveSelectUnit.rotation = snapRotation(ang);
+                        }
+
+                        playSound('footstep');
+
+                        // Send move action to server (multiplayer)
+                        if (isOnlineGame && isMyTurn) {
+                            sendAction({
+                                type: 'move',
+                                unitId: moveSelectUnit.id,
+                                destC: hit.c,
+                                destR: hit.r,
+                                cost: cost
+                            });
+                        }
+                    }
+                } else {
+                    // Check if clicked on enemy - find adjacent reachable hex to attack from
+                    const targetPiece = pieces.find(p => p.c === hit.c && p.r === hit.r && p.hp > 0);
+                    if (targetPiece && targetPiece.color !== moveSelectUnit.color && moveSelectUnit.canMelee !== false) {
+                        // Find best adjacent reachable hex to attack from
+                        const neighbors = getNeighbors(hit.c, hit.r);
+                        let bestAdjacent = null;
+                        let bestCost = Infinity;
+
+                        for (const n of neighbors) {
+                            const nKey = `${n.c},${n.r}`;
+                            if (reachableHexes.has(nKey)) {
+                                const nData = reachableHexes.get(nKey);
+                                // Calculate attack cost from this position
+                                const attackTerrainCost = getTerrainMovementCost(moveSelectUnit.type, hit.c, hit.r);
+                                const attackCost = Math.ceil(attackTerrainCost);
+                                const totalCost = nData.cost + attackCost;
+
+                                if (totalCost <= moveSelectUnit.ap && nData.cost < bestCost) {
+                                    bestCost = nData.cost;
+                                    bestAdjacent = { c: n.c, r: n.r, moveCost: nData.cost, attackCost: attackCost };
+                                }
+                            }
+                        }
+
+                        // Also check if already adjacent (cost 0)
+                        const alreadyAdjacent = neighbors.some(n => n.c === moveSelectUnit.c && n.r === moveSelectUnit.r);
+                        if (alreadyAdjacent) {
+                            const attackTerrainCost = getTerrainMovementCost(moveSelectUnit.type, hit.c, hit.r);
+                            const attackCost = Math.ceil(attackTerrainCost);
+                            if (attackCost <= moveSelectUnit.ap) {
+                                bestAdjacent = { c: moveSelectUnit.c, r: moveSelectUnit.r, moveCost: 0, attackCost: attackCost };
+                            }
+                        }
+
+                        if (bestAdjacent) {
+                            saveStateForUndo();
+
+                            // Move to adjacent hex if needed
+                            if (bestAdjacent.c !== moveSelectUnit.c || bestAdjacent.r !== moveSelectUnit.r) {
+                                moveSelectUnit.c = bestAdjacent.c;
+                                moveSelectUnit.r = bestAdjacent.r;
+                            }
+                            moveSelectUnit.ap -= (bestAdjacent.moveCost + bestAdjacent.attackCost);
+
+                            // Face the target
+                            const tPos = getHexCenter(targetPiece.c, targetPiece.r);
+                            const uPos = getHexCenter(moveSelectUnit.c, moveSelectUnit.r);
+                            moveSelectUnit.rotation = snapRotation(Math.atan2(tPos.y - uPos.y, tPos.x - uPos.x));
+
+                            // Send attack action to server (multiplayer)
+                            if (isOnlineGame && isMyTurn) {
+                                sendAction({
+                                    type: 'attack',
+                                    attackerId: moveSelectUnit.id,
+                                    defenderId: targetPiece.id
+                                });
+                            }
+
+                            startMeleeCombat(moveSelectUnit, targetPiece, false);
+                        }
+                    }
+                }
+                // Reset move select state
+                interactionState = 'idle';
+                moveSelectUnit = null;
+                selectedPiece = null;
+                reachableHexes.clear();
+                draw();
+                return;
+            }
             dragStartPos = { x: e.clientX, y: e.clientY };
             if (hit) {
                 const p = pieces.find(x => x.c === hit.c && x.r === hit.r);
@@ -7306,8 +7490,8 @@
                     interactionState = 'potential_drag';
                     playSound('select');
                 }
-                else { if (interactionState !== 'aim_shoot' && interactionState !== 'retreat_select') { interactionState = 'idle'; selectedPiece = null; } closeMenu(); }
-            } else { if (interactionState !== 'aim_shoot' && interactionState !== 'retreat_select') { interactionState = 'idle'; selectedPiece = null; } closeMenu(); }
+                else { if (interactionState !== 'aim_shoot' && interactionState !== 'retreat_select' && interactionState !== 'move_select') { interactionState = 'idle'; selectedPiece = null; moveSelectUnit = null; reachableHexes.clear(); } closeMenu(); }
+            } else { if (interactionState !== 'aim_shoot' && interactionState !== 'retreat_select' && interactionState !== 'move_select') { interactionState = 'idle'; selectedPiece = null; moveSelectUnit = null; reachableHexes.clear(); } closeMenu(); }
             draw();
         };
 
@@ -7713,6 +7897,9 @@
 
         function showMenu(x, y, p) {
             menuEl.style.display = 'flex'; menuEl.style.left = x + 'px'; menuEl.style.top = y + 'px';
+            // Move: available if unit has AP and is not engaged (mobile-friendly alternative to drag)
+            const canMove = p.ap >= 1 && !p.engagedWith;
+            document.getElementById('btn-move-action').style.display = canMove ? 'block' : 'none';
             // Archer can shoot only if not engaged in melee
             document.getElementById('btn-shoot-action').style.display = (p.canShoot && p.ap >= 1 && !p.engagedWith) ? 'block' : 'none';
             // Defend available to all engaged non-aggressor units
@@ -8552,31 +8739,32 @@
                 let needsDottedOverlay = false;
                 let dotColor = null;
 
-                if (interactionState === 'drag' && draggedPiece) {
+                if ((interactionState === 'drag' && draggedPiece) || (interactionState === 'move_select' && moveSelectUnit)) {
+                    const activeUnit = draggedPiece || moveSelectUnit;
                     if (reachableHexes.has(k)) {
                         needsDottedOverlay = true;
                         const hexData = reachableHexes.get(k);
                         if (hexData.isCastle) {
                             dotColor = "#e6c84b"; // Yellow for castling move
-                        } else if (isNearEnemy(c, r, draggedPiece.color)) {
+                        } else if (isNearEnemy(c, r, activeUnit.color)) {
                             dotColor = "#d4a857"; // Gold for near enemy (ZoC)
                         } else {
                             dotColor = "#6b8e6b"; // Green for safe move
                         }
                     } else {
                         // Check if this hex has an enemy that can be attacked from a reachable hex
-                        const enemyHere = pieces.find(p => p.c === c && p.r === r && p.color !== draggedPiece.color && p.hp > 0);
-                        if (enemyHere && draggedPiece.canMelee !== false) {
+                        const enemyHere = pieces.find(p => p.c === c && p.r === r && p.color !== activeUnit.color && p.hp > 0);
+                        if (enemyHere && activeUnit.canMelee !== false) {
                             // Check if any adjacent hex is reachable AND has enough AP for attack
                             const neighbors = getNeighbors(c, r);
                             // Calculate attack cost (terrain-based only, ZoC does NOT affect attack cost)
-                            const attackTerrainCost = getTerrainMovementCost(draggedPiece.type, c, r);
+                            const attackTerrainCost = getTerrainMovementCost(activeUnit.type, c, r);
                             const attackCost = Math.ceil(attackTerrainCost);
                             const canAttack = neighbors.some(n => {
                                 const nKey = `${n.c},${n.r}`;
                                 if (!reachableHexes.has(nKey)) return false;
                                 const moveCost = reachableHexes.get(nKey).cost;
-                                return draggedPiece.ap - moveCost >= attackCost;
+                                return activeUnit.ap - moveCost >= attackCost;
                             });
                             if (canAttack) {
                                 needsDottedOverlay = true;
@@ -8631,6 +8819,16 @@
                             const last = manualPath.length > 0 ? manualPath[manualPath.length-1] : {c: draggedPiece.c, r: draggedPiece.r};
                             const dist = (Math.abs(oddRToCube(last.c, last.r).q - oddRToCube(c, r).q) + Math.abs(oddRToCube(last.c, last.r).r - oddRToCube(c, r).r) + Math.abs(oddRToCube(last.c, last.r).s - oddRToCube(c, r).s))/2;
                             if (dist === 1) { col = "#c9a070"; str = "#8b4444"; }
+                        }
+                    } else if (interactionState === 'move_select' && moveSelectUnit) {
+                        // Highlight valid destinations in move_select mode
+                        const key = `${c},${r}`;
+                        if (reachableHexes.has(key)) {
+                            col = "#b8d4b8"; str = "#4a6b4a"; // Green highlight for valid move
+                        }
+                        const target = pieces.find(p => p.c === c && p.r === r);
+                        if (target && target.color !== moveSelectUnit.color) {
+                            col = "#c9a070"; str = "#8b4444"; // Red highlight for attackable enemy
                         }
                     } else if (interactionState === 'placing') { col = "#c9b896"; str = "#8b6914"; }
                     else if (interactionState === 'deleting') { col = "#c9a070"; str = "#8b4444"; }

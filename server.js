@@ -49,20 +49,25 @@ io.on('connection', (socket) => {
     console.log(`Player connected: ${socket.id}`);
 
     // Create a new room
-    socket.on('create-room', (playerName, callback) => {
+    socket.on('create-room', (data, callback) => {
+        // Support both old format (string) and new format (object with gameVersion)
+        const playerName = typeof data === 'string' ? data : (data.playerName || 'Player 1');
+        const gameVersion = typeof data === 'object' ? (data.gameVersion || 'classic') : 'classic';
+
         const roomCode = generateRoomCode();
 
         rooms.set(roomCode, {
             code: roomCode,
             host: {
                 id: socket.id,
-                name: playerName || 'Player 1',
+                name: playerName,
                 color: 'green',
                 ready: false,
                 connected: true
             },
             guest: null,
             gameStarted: false,
+            gameVersion: gameVersion, // Store game version selected by host
             currentTurn: 'green',
             turnNumber: 1,
             // Authoritative game state - single source of truth
@@ -74,12 +79,13 @@ io.on('connection', (socket) => {
         socket.roomCode = roomCode;
         socket.playerColor = 'green';
 
-        console.log(`Room ${roomCode} created by ${playerName}`);
+        console.log(`Room ${roomCode} created by ${playerName} (${gameVersion} mode)`);
 
         callback({
             success: true,
             roomCode: roomCode,
-            playerColor: 'green'
+            playerColor: 'green',
+            gameVersion: gameVersion
         });
     });
 
@@ -126,7 +132,8 @@ io.on('connection', (socket) => {
             success: true,
             roomCode: roomCode.toUpperCase(),
             playerColor: 'red',
-            hostName: room.host.name
+            hostName: room.host.name,
+            gameVersion: room.gameVersion || 'classic'
         });
     });
 
@@ -147,9 +154,10 @@ io.on('connection', (socket) => {
             io.to(socket.roomCode).emit('game-start', {
                 hostName: room.host.name,
                 guestName: room.guest.name,
-                firstTurn: 'green'
+                firstTurn: 'green',
+                gameVersion: room.gameVersion || 'classic'
             });
-            console.log(`Game started in room ${socket.roomCode}`);
+            console.log(`Game started in room ${socket.roomCode} (${room.gameVersion} mode)`);
         } else {
             socket.to(socket.roomCode).emit('opponent-ready');
         }
