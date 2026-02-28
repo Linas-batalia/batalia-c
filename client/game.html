@@ -593,6 +593,8 @@
         <button id="undo-btn" class="end-turn-btn" style="background: linear-gradient(180deg, #7a5c3a 0%, #5a4028 100%); opacity: 0.5; pointer-events: none;" onclick="undoLastAction()">↩ Undo</button>
         <button id="end-turn-btn" class="end-turn-btn">&#9876; End Turn</button>
         <div class="panel-buttons">
+            <button class="icon-btn" onclick="window.zoomIn()" title="Zoom In">+</button>
+            <button class="icon-btn" onclick="window.zoomOut()" title="Zoom Out">−</button>
             <button class="icon-btn" onclick="window.toggleSound()" title="Sound" id="sound-btn">🔊</button>
             <button class="icon-btn" onclick="window.resetGame()" title="Restart">↺</button>
             <button class="icon-btn" onclick="window.backToMenu()" title="Menu">☰</button>
@@ -882,9 +884,10 @@
 
         // ===== KNIGHT/HORSE IMAGE =====
         const knightImg = new Image();
-        knightImg.src = 'images/knight_option3_black.png';
+        knightImg.src = 'images/knight_option3_black.png?v=' + Date.now(); // Cache-bust
         let knightImgLoaded = false;
-        knightImg.onload = () => { knightImgLoaded = true; };
+        knightImg.onload = () => { knightImgLoaded = true; console.log('Knight image loaded'); };
+        knightImg.onerror = () => { console.error('Failed to load knight image'); };
 
         // ===== SOUND SYSTEM =====
         let soundEnabled = true;
@@ -1194,12 +1197,25 @@
             }
             if (soundEnabled) playSound('click');
         };
+
+        window.zoomIn = () => {
+            zoomMultiplier = Math.min(2.5, zoomMultiplier + 0.15);
+            resize();
+            playSound('click');
+        };
+
+        window.zoomOut = () => {
+            zoomMultiplier = Math.max(0.5, zoomMultiplier - 0.15);
+            resize();
+            playSound('click');
+        };
         const menuEl = document.getElementById('actionMenu');
         const recruitSidebar = document.getElementById('recruit-sidebar');
 
         const BOARD_COLS = 11, BOARD_ROWS = 9, HEX_SIZE = 40;
         let turnNumber = 1, activeTeam = 'red';
         let scale = 1, bW = 0, bH = 0;
+        let zoomMultiplier = 1.0; // Manual zoom control (0.5 to 2.0)
 
         // Central hex control for Demo mode (hex 40) - win by holding for 3 turns
         const CENTRAL_HEX_NUM = 40;
@@ -4051,8 +4067,11 @@
             return { x: (c * w + (r % 2 ? w/2 : 0)) + w/2, y: (r * h * 0.75) + h/2 };
         }
         function getLocalCoordinates(px, py) {
+            // Use screen dimensions (not canvas dimensions which are scaled by DPR)
+            const screenWidth = window.innerWidth;
+            const screenHeight = window.innerHeight;
             // Account for board shift left by 60px for rules panel
-            const cx = canvas.width/2 - 60, cy = canvas.height/2, dx = px - cx, dy = py - cy;
+            const cx = screenWidth/2 - 60, cy = screenHeight/2, dx = px - cx, dy = py - cy;
             // Standard rotation is 90° (ca=0, sa=-1)
             // Red team in online mode has extra 180° rotation (ca=0, sa=1)
             let ca = 0, sa = -1;
@@ -4872,7 +4891,8 @@
             else if (p.type === 'knight' || p.type === 'cavalry' || p.type === 'light_cavalry' || p.type === 'heavy_cavalry') {
                 // Draw knight image with team color tinting
                 if (knightImgLoaded) {
-                    const imgSize = size * 0.9;
+                    const imgSize = size * 0.85;
+                    const yOffset = -size * 0.12; // Move higher to avoid HP overlap
                     // Use offscreen canvas for color tinting
                     const offscreen = document.createElement('canvas');
                     offscreen.width = imgSize;
@@ -4884,8 +4904,8 @@
                     offCtx.globalCompositeOperation = 'source-atop';
                     offCtx.fillStyle = p.color;
                     offCtx.fillRect(0, 0, imgSize, imgSize);
-                    // Draw tinted image to main canvas
-                    ctx.drawImage(offscreen, -imgSize/2, -imgSize/2);
+                    // Draw tinted image to main canvas (offset upward)
+                    ctx.drawImage(offscreen, -imgSize/2, -imgSize/2 + yOffset);
                 } else {
                     // Fallback to drawn horse head if image not loaded
                     drawHorseHead(ctx, size, p.color);
@@ -7324,7 +7344,7 @@
 
             // On mobile, use more aggressive scaling to fill screen
             const scaleFactor = isMobile ? 0.95 : 0.9;
-            scale = Math.min(aW / effectiveH, aH / effectiveW) * scaleFactor;
+            scale = Math.min(aW / effectiveH, aH / effectiveW) * scaleFactor * zoomMultiplier;
             if (!scale || scale < 0) scale = 1;
             bW = rW * scale; bH = rH * scale;
 
