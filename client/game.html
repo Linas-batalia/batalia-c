@@ -1230,6 +1230,8 @@
         // Central hex control for Demo mode (hex 40) - win by holding for 3 turns
         const CENTRAL_HEX_NUM = 40;
         let centralHexControl = { team: null, turns: 0 };
+        // Flag capture animation effect
+        let flagCaptureAnimation = null; // { team: color, progress: 0-1, type: 'capture'|'increment' }
         let pieces = [];
         let nextUnitId = 1; // Counter for unique unit IDs
         let undoHistory = []; // Stack of saved game states for undo
@@ -2023,6 +2025,10 @@
             return pieces.find(p => p.id === unitId);
         }
 
+        // Queue for pending actions (attack after move)
+        let pendingOpponentActions = [];
+        let unitMoving = new Map(); // Track which units are currently moving
+
         function applyOpponentMove(action) {
             const unit = findUnitById(action.unitId);
             if (!unit) return;
@@ -2047,10 +2053,29 @@
                     draw();
                 }
             } else {
+                // Mark unit as moving
+                unitMoving.set(action.unitId, true);
                 // Regular move with animation
                 startMovementAnimation(unit, action.destC, action.destR, action.cost, () => {
+                    // Movement complete - mark unit as not moving
+                    unitMoving.delete(action.unitId);
                     draw();
+                    // Process any pending actions for this unit
+                    processPendingActions(action.unitId);
                 });
+            }
+        }
+
+        // Process pending actions for a unit after its movement completes
+        function processPendingActions(unitId) {
+            const pendingIndex = pendingOpponentActions.findIndex(a =>
+                (a.type === 'attack' && a.attackerId === unitId) ||
+                (a.type === 'shoot' && a.shooterId === unitId)
+            );
+            if (pendingIndex !== -1) {
+                const pendingAction = pendingOpponentActions.splice(pendingIndex, 1)[0];
+                console.log('Processing pending action after move:', pendingAction.type);
+                applyOpponentAction(pendingAction);
             }
         }
 
@@ -2073,6 +2098,13 @@
             const attacker = findUnitById(action.attackerId);
             const defender = findUnitById(action.defenderId);
             if (!attacker || !defender) return;
+
+            // If attacker is still moving, queue this attack for later
+            if (unitMoving.has(action.attackerId)) {
+                console.log('Attacker still moving, queuing attack action');
+                pendingOpponentActions.push(action);
+                return;
+            }
 
             // false = normal attack (attacker strikes first)
             startMeleeCombat(attacker, defender, false);
@@ -3411,7 +3443,24 @@
             if (centralHexControl.team) {
                 const activeColor = (activeTeam === 'red') ? RCOL : GCOL;
                 if (centralHexControl.team === activeColor) {
+                    const oldTurns = centralHexControl.turns;
                     centralHexControl.turns++;
+
+                    // Visual effect for turn increment (holding flag)
+                    if (centralHexControl.turns > oldTurns) {
+                        const centralCoord = hexNumToCoord.get(CENTRAL_HEX_NUM);
+                        if (centralCoord) {
+                            const flagPos = getHexCenter(centralCoord.c, centralCoord.r);
+                            const turnsLeft = 6 - centralHexControl.turns;
+                            if (turnsLeft > 0) {
+                                addFloatingText(flagPos.x, flagPos.y - 40 * scale, `${turnsLeft} TO WIN`, centralHexControl.team, 24, 'scale');
+                            } else {
+                                addFloatingText(flagPos.x, flagPos.y - 40 * scale, 'VICTORY!', centralHexControl.team, 32, 'scale');
+                            }
+                            // Pulse effect
+                            startFlagCaptureAnimation(centralHexControl.team, 'increment');
+                        }
+                    }
                 }
             }
         }
@@ -3429,10 +3478,42 @@
 
             if (unitOnCenter && centralHexControl.team !== unitOnCenter.color) {
                 // New team captures - immediately show 1 (enemy took it OR first capture)
+                const previousTeam = centralHexControl.team;
                 centralHexControl.team = unitOnCenter.color;
                 centralHexControl.turns = 1;
+
+                // Trigger flag capture animation
+                startFlagCaptureAnimation(unitOnCenter.color, previousTeam ? 'capture' : 'first');
+                playSound('death'); // Dramatic sound for flag capture
+
+                // Add floating text at flag location
+                const flagPos = getHexCenter(centralCoord.c, centralCoord.r);
+                const teamName = unitOnCenter.color === RCOL ? 'AMBER' : 'GREEN';
+                addFloatingText(flagPos.x, flagPos.y - 60 * scale, `${teamName} FLAG!`, unitOnCenter.color, 32, 'scale');
             }
             // NOTE: When hex becomes empty, we do NOT reset - flag stays claimed
+        }
+
+        // Start flag capture animation
+        function startFlagCaptureAnimation(team, type) {
+            flagCaptureAnimation = { team, progress: 0, type };
+            animateFlagCapture();
+        }
+
+        // Animate flag capture effect
+        function animateFlagCapture() {
+            if (!flagCaptureAnimation) return;
+
+            flagCaptureAnimation.progress += 0.02;
+
+            if (flagCaptureAnimation.progress >= 1.0) {
+                flagCaptureAnimation = null;
+                draw();
+                return;
+            }
+
+            draw();
+            requestAnimationFrame(animateFlagCapture);
         }
 
         function showVictory(winner) {
@@ -4800,8 +4881,9 @@
             }
             if (p.engagedWith && !activeCombat) {
                 if (p.isAggressor) {
+                    // Attacker shifts closer to defender during combat lock
                     const tCnt = getHexCenter(p.engagedWith.c, p.engagedWith.r);
-                    const ang = Math.atan2(tCnt.y - drawY, tCnt.x - drawX), shift = size * 0.4; 
+                    const ang = Math.atan2(tCnt.y - drawY, tCnt.x - drawX), shift = size * 0.75;
                     drawX += Math.cos(ang) * shift; drawY += Math.sin(ang) * shift;
                 } else {
                     const pulse = (Math.sin(Date.now() / 150) + 1) / 2;
@@ -4821,8 +4903,8 @@
                 if (isStriker) {
                     const target = (p === activeCombat.attacker) ? activeCombat.defender : activeCombat.attacker;
                     const tCnt = getHexCenter(target.c, target.r);
-                    // Lunge far enough to touch borders with defender
-                    const lungeMag = Math.sin(activeCombat.progress * Math.PI) * (size * 1.1);
+                    // Lunge far enough to nearly touch the defender during battle strikes
+                    const lungeMag = Math.sin(activeCombat.progress * Math.PI) * (size * 1.5);
                     const ang = Math.atan2(tCnt.y - drawY, tCnt.x - drawX);
                     drawX += Math.cos(ang) * lungeMag; drawY += Math.sin(ang) * lungeMag;
                 }
@@ -4867,7 +4949,9 @@
                 // Custom solid shield in team color
                 ctx.translate(0, -size * 0.1); // Move shield higher
                 // Draw golden shield behind when Shield ability is active
-                if (p.shieldActive) {
+                // Only show to own team (in online games, hide from opponent)
+                const isOwnUnit = !isOnlineGame || (p.color === (myColor === 'green' ? GCOL : RCOL));
+                if (p.shieldActive && isOwnUnit) {
                     // Draw larger golden shield behind (glowing effect)
                     ctx.save();
                     ctx.globalAlpha = 0.8;
@@ -7816,23 +7900,35 @@
                             const moveFromR = draggedPiece.r;
 
                             if (needsMove) {
-                                // Send move+attack action to server (multiplayer) - defer state sync until combat completes
+                                // Split into two separate actions: move first, then attack
+                                // Send move action to server (multiplayer)
                                 if (isOnlineGame && isMyTurn) {
                                     sendAction({
-                                        type: 'move-attack',
+                                        type: 'move',
                                         unitId: draggedPiece.id,
-                                        moveToC: last.c,
-                                        moveToR: last.r,
-                                        moveCost: moveCost,
-                                        defenderId: target.id
-                                    }, true);
+                                        destC: last.c,
+                                        destR: last.r,
+                                        cost: moveCost
+                                    });
                                 }
+                                // Store target for attack after movement completes
+                                const attackTarget = target;
+                                const attackCostCopy = attackCost;
+                                const attackerId = draggedPiece.id;
                                 // Animate movement first, then attack
                                 startMovementAnimation(draggedPiece, last.c, last.r, moveCost, () => {
-                                    const s = getHexCenter(last.c, last.r), t = getHexCenter(target.c, target.r);
+                                    const s = getHexCenter(last.c, last.r), t = getHexCenter(attackTarget.c, attackTarget.r);
                                     draggedPiece.rotation = snapRotation(Math.atan2(t.y - s.y, t.x - s.x));
-                                    draggedPiece.ap = Math.max(0, draggedPiece.ap - attackCost);
-                                    startMeleeCombat(draggedPiece, target);
+                                    draggedPiece.ap = Math.max(0, draggedPiece.ap - attackCostCopy);
+                                    // Send attack action after movement completes
+                                    if (isOnlineGame && isMyTurn) {
+                                        sendAction({
+                                            type: 'attack',
+                                            attackerId: attackerId,
+                                            defenderId: attackTarget.id
+                                        }, true);
+                                    }
+                                    startMeleeCombat(draggedPiece, attackTarget);
                                 });
                                 transitioning = true;
                             } else {
@@ -8208,6 +8304,46 @@
 
             const cnt = getHexCenter(centralCoord.c, centralCoord.r);
             const flagScale = scale * 0.8;
+
+            // Draw capture animation effect (pulsing glow)
+            if (flagCaptureAnimation) {
+                const animProgress = flagCaptureAnimation.progress;
+                const pulseScale = 1 + Math.sin(animProgress * Math.PI * 4) * 0.3; // Pulsing
+                const glowRadius = HEX_SIZE * scale * (0.8 + animProgress * 1.5);
+                const glowAlpha = (1 - animProgress) * 0.7;
+
+                const glowColor = flagCaptureAnimation.team === RCOL ?
+                    `rgba(200, 112, 48, ${glowAlpha})` : `rgba(74, 138, 74, ${glowAlpha})`;
+
+                ctx.save();
+                ctx.translate(cnt.x, cnt.y);
+
+                // Expanding rings
+                for (let i = 0; i < 3; i++) {
+                    const ringProgress = (animProgress + i * 0.15) % 1;
+                    const ringRadius = glowRadius * ringProgress * pulseScale;
+                    const ringAlpha = (1 - ringProgress) * glowAlpha;
+
+                    ctx.beginPath();
+                    ctx.arc(0, 0, ringRadius, 0, Math.PI * 2);
+                    ctx.strokeStyle = flagCaptureAnimation.team === RCOL ?
+                        `rgba(255, 150, 50, ${ringAlpha})` : `rgba(100, 200, 100, ${ringAlpha})`;
+                    ctx.lineWidth = 4 * scale * (1 - ringProgress);
+                    ctx.stroke();
+                }
+
+                // Central glow
+                const gradient = ctx.createRadialGradient(0, 0, 0, 0, 0, glowRadius * 0.6);
+                gradient.addColorStop(0, flagCaptureAnimation.team === RCOL ?
+                    `rgba(255, 180, 80, ${glowAlpha * 0.8})` : `rgba(120, 220, 120, ${glowAlpha * 0.8})`);
+                gradient.addColorStop(1, 'rgba(0, 0, 0, 0)');
+                ctx.fillStyle = gradient;
+                ctx.beginPath();
+                ctx.arc(0, 0, glowRadius * 0.6, 0, Math.PI * 2);
+                ctx.fill();
+
+                ctx.restore();
+            }
 
             ctx.save();
             // Offset flag lower on the hex to stay within bounds and not overlap canvas
