@@ -581,16 +581,16 @@
                         <button class="diff-btn" data-flag="off" onclick="toggleCaptureFlag(false)">👑 General Only</button>
                     </div>
                 </div>
-                <div id="online-section" class="difficulty-section" style="display:none;">
+                <div id="online-section" class="difficulty-section" style="display:none; overflow: visible;">
                     <div class="menu-label" style="margin-top:15px;">🌐 Online Multiplayer</div>
                     <div id="online-connect" style="margin-bottom: 10px;">
                         <input type="text" id="player-name-input" placeholder="Your name" maxlength="15" class="online-input" style="width: 100%; margin-bottom: 8px;">
                         <input type="text" id="server-url-input" placeholder="Server URL (leave empty for default)" class="online-input" style="width: 100%; margin-bottom: 8px; font-size: 0.8rem;">
                     </div>
-                    <div id="online-lobby" style="display: flex; flex-direction: column; gap: 8px;">
-                        <div style="display: flex; gap: 8px; align-items: center; margin-bottom: 4px;">
+                    <div id="online-lobby" style="display: flex; flex-direction: column; gap: 8px; position: relative; z-index: 10;">
+                        <div style="display: flex; gap: 8px; align-items: center; margin-bottom: 4px; position: relative; z-index: 20;">
                             <span style="color: #a89070; font-size: 0.85rem;">Game Mode:</span>
-                            <select id="online-game-version" class="online-input" style="flex: 1; padding: 6px;">
+                            <select id="online-game-version" class="online-input" style="flex: 1; padding: 6px; position: relative; z-index: 30;">
                                 <option value="classic">Classic</option>
                                 <option value="arcade">Arcade</option>
                                 <option value="demo">Demo (Terrain)</option>
@@ -1102,6 +1102,12 @@
                     playMetallic(400, 0.06, 0.1);
                     playNoise(0.03, 0.08);
                     break;
+
+                case 'turnChange':
+                    // Short horn fanfare for turn change
+                    playHorn(392, 0.15, 0.2); // G4
+                    setTimeout(() => playHorn(523, 0.2, 0.25), 120); // C5
+                    break;
             }
         }
 
@@ -1433,6 +1439,29 @@
         // Floating text system for combat feedback
         let floatingTexts = [];
 
+        // Turn change flash animation
+        let turnFlashProgress = 0;
+        let turnFlashActive = false;
+
+        function triggerTurnFlash() {
+            turnFlashActive = true;
+            turnFlashProgress = 0;
+            playSound('turnChange');
+            animateTurnFlash();
+        }
+
+        function animateTurnFlash() {
+            if (!turnFlashActive) return;
+            turnFlashProgress += 0.05;
+            if (turnFlashProgress >= 1) {
+                turnFlashActive = false;
+                turnFlashProgress = 0;
+            } else {
+                requestAnimationFrame(animateTurnFlash);
+            }
+            draw();
+        }
+
         // Get the viewing team color for visibility checks
         function getViewingTeamColor() {
             if (isOnlineGame) {
@@ -1737,6 +1766,9 @@
                 turnNumber = data.turnNumber;
                 activeTeam = data.currentTurn;
 
+                // Trigger turn change visual and audio feedback
+                triggerTurnFlash();
+
                 // Clear any pending interaction state
                 interactionState = 'idle';
                 selectedPiece = null;
@@ -1867,6 +1899,10 @@
             // Hide menu and replay controls (should not appear in online mode)
             document.querySelector('.start-overlay').classList.add('hidden');
             document.getElementById('replay-controls').style.display = 'none';
+
+            // Show rules panel beside the game canvas
+            const rulesPanel = document.querySelector('.rules-panel');
+            if (rulesPanel) rulesPanel.classList.add('visible');
 
             // Initialize game
             initGame();
@@ -5492,6 +5528,9 @@
             activeTeam = (activeTeam === 'red') ? 'green' : 'red';
             if (activeTeam === 'red') turnNumber++;
 
+            // Trigger turn change visual and audio feedback
+            triggerTurnFlash();
+
             const newActiveColor = (activeTeam === 'red') ? RCOL : GCOL;
             pieces.forEach(p => {
                 p.hasFought = false;
@@ -9065,6 +9104,23 @@
             ctx.strokeStyle = teamColorDark;
             ctx.lineWidth = 2;
             ctx.stroke();
+
+            // Turn change flash effect
+            if (turnFlashActive) {
+                // Pulsing glow effect
+                const flashIntensity = Math.sin(turnFlashProgress * Math.PI) * 0.8;
+                ctx.save();
+                // Bright overlay on flag
+                ctx.fillStyle = `rgba(255, 255, 200, ${flashIntensity * 0.6})`;
+                ctx.fill();
+                // Glowing border
+                ctx.shadowColor = '#ffdd44';
+                ctx.shadowBlur = 20 + flashIntensity * 30;
+                ctx.strokeStyle = `rgba(255, 220, 100, ${flashIntensity})`;
+                ctx.lineWidth = 4;
+                ctx.stroke();
+                ctx.restore();
+            }
 
             // Round number on flag (white)
             ctx.fillStyle = 'rgba(255, 255, 255, 0.95)';
