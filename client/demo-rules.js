@@ -52,8 +52,10 @@ const DemoRules = (function() {
     const TERRAIN_TYPES = {
         PLAINS: 'plains',
         FOREST: 'forest',
-        HILLS: 'hills',
+        HILLS: 'hills',              // Blocks ALL line of sight
+        HIGHLAND: 'highland',        // Blocks LoS to lowland only (can shoot over to elevated)
         HILLS_FOREST: 'hillsForest',
+        HIGHLAND_FOREST: 'highlandForest',
         LAKE: 'lake'
     };
 
@@ -105,10 +107,20 @@ const DemoRules = (function() {
             melee: 2.0,
             ranged: 2.0
         },
+        highland: {
+            mounted: 1.0,     // Highland acts like plains once on it
+            melee: 1.0,
+            ranged: 1.0
+        },
         hillsForest: {
             mounted: 2.0,     // Very difficult terrain
             melee: 2.0,
             ranged: 2.0
+        },
+        highlandForest: {
+            mounted: 1.5,     // Highland+forest: forest penalty only
+            melee: 1.0,
+            ranged: 1.0
         },
         lake: {
             mounted: Infinity, // Cannot enter
@@ -125,7 +137,9 @@ const DemoRules = (function() {
         plains: null,         // No arrow protection
         forest: 1,            // Arrows blocked if shooter > 1 hex away
         hills: null,          // No arrow protection
+        highland: null,       // No arrow protection
         hillsForest: 1,       // Arrows blocked if shooter > 1 hex away
+        highlandForest: 1,    // Arrows blocked if shooter > 1 hex away
         lake: null
     };
 
@@ -134,7 +148,9 @@ const DemoRules = (function() {
         plains: 3,            // Normal range
         forest: 1,            // Can only shoot 1 hex from forest
         hills: 3,             // Normal range (no bonus)
+        highland: 3,          // Normal range (no bonus)
         hillsForest: 1,       // Forest limits range
+        highlandForest: 1,    // Forest limits range
         lake: 0
     };
 
@@ -145,7 +161,9 @@ const DemoRules = (function() {
         plains: true,         // Normal locking
         forest: true,         // Normal locking
         hills: false,         // Attacker does NOT lock defender on hills
+        highland: true,       // Highland acts like plains - normal locking
         hillsForest: false,   // Attacker does NOT lock defender
+        highlandForest: true, // Highland+forest: normal locking (highland rules)
         lake: false
     };
 
@@ -155,7 +173,9 @@ const DemoRules = (function() {
         plains: true,
         forest: true,
         hills: false,         // Phase 3 requires Mountaineer
+        highland: true,       // Highland acts like plains - normal combat
         hillsForest: false,   // Phase 3 requires Mountaineer
+        highlandForest: true, // Highland+forest: highland rules apply
         lake: true
     };
 
@@ -163,10 +183,10 @@ const DemoRules = (function() {
 
     const UNIT_TERRAIN_ABILITIES = {
         knight: {
-            // Charge only works when on plains AND attacking into plains
-            chargeTerrains: ['plains'],
+            // Charge works on plains and highland (elevated plains)
+            chargeTerrains: ['plains', 'highland'],
             // Cannot use Charge when attacking into these terrains
-            noChargeInto: ['forest', 'hills', 'hillsForest', 'lake']
+            noChargeInto: ['forest', 'hills', 'hillsForest', 'highlandForest', 'lake']
         },
         shieldman: {
             // No terrain-specific abilities, uses general hill rules
@@ -177,7 +197,8 @@ const DemoRules = (function() {
             // Range limited in forest
             rangePenalty: {
                 forest: 2,        // Reduce from 3 to 1
-                hillsForest: 2    // Reduce from 3 to 1
+                hillsForest: 2,   // Reduce from 3 to 1
+                highlandForest: 2 // Reduce from 3 to 1
             }
         }
     };
@@ -187,8 +208,10 @@ const DemoRules = (function() {
     const BLOCKS_LOS = {
         plains: false,
         forest: true,     // Blocks line of sight for ranged attacks
-        hills: false,     // Does not block (you can see over)
+        hills: true,      // Hills block ALL line of sight (cannot shoot over)
+        highland: false,  // Highland blocks LoS to lowland only (handled in game.html)
         hillsForest: true,
+        highlandForest: true,
         lake: false
     };
 
@@ -203,7 +226,9 @@ const DemoRules = (function() {
         if (!terrainData) return TERRAIN_TYPES.PLAINS;
         if (terrainData.lake) return TERRAIN_TYPES.LAKE;
         if (terrainData.hill && terrainData.forest) return TERRAIN_TYPES.HILLS_FOREST;
+        if (terrainData.highland && terrainData.forest) return TERRAIN_TYPES.HIGHLAND_FOREST;
         if (terrainData.hill) return TERRAIN_TYPES.HILLS;
+        if (terrainData.highland) return TERRAIN_TYPES.HIGHLAND;
         if (terrainData.forest) return TERRAIN_TYPES.FOREST;
         return TERRAIN_TYPES.PLAINS;
     }

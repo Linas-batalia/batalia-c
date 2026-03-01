@@ -435,6 +435,78 @@
             background: #8b6914;
             border-radius: 4px;
         }
+
+        /* Online Rules Accordion */
+        .online-rules-toggle {
+            width: 100%;
+            background: linear-gradient(180deg, #5c4a32 0%, #4a3a28 100%);
+            border: 1px solid #8b6914;
+            border-radius: 6px;
+            color: #f5e6c8;
+            padding: 10px 15px;
+            font-family: 'Cinzel', serif;
+            font-size: 0.9rem;
+            cursor: pointer;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-top: 12px;
+            transition: background 0.2s;
+        }
+        .online-rules-toggle:hover {
+            background: linear-gradient(180deg, #6c5a42 0%, #5a4a38 100%);
+        }
+        .online-rules-toggle .toggle-arrow {
+            transition: transform 0.3s;
+        }
+        .online-rules-toggle.expanded .toggle-arrow {
+            transform: rotate(180deg);
+        }
+        .online-rules-content {
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.3s ease-out;
+            background: rgba(201, 184, 150, 0.3);
+            border-radius: 0 0 6px 6px;
+            margin-top: -1px;
+        }
+        .online-rules-content.expanded {
+            max-height: 400px;
+            overflow-y: auto;
+            border: 1px solid #8b6914;
+            border-top: none;
+        }
+        .online-rules-inner {
+            padding: 12px;
+        }
+        .online-rules-inner h4 {
+            color: #5c3d1e;
+            font-family: 'Cinzel', serif;
+            font-size: 0.85rem;
+            margin: 0 0 6px 0;
+            border-bottom: 1px solid rgba(139, 105, 20, 0.3);
+            padding-bottom: 4px;
+        }
+        .online-rules-inner p {
+            color: #3d2914;
+            font-size: 0.75rem;
+            margin: 3px 0;
+            font-style: normal;
+        }
+        .online-rules-inner .rule-item {
+            margin-bottom: 10px;
+        }
+        .online-rules-content::-webkit-scrollbar {
+            width: 6px;
+        }
+        .online-rules-content::-webkit-scrollbar-track {
+            background: #d4c4a8;
+            border-radius: 3px;
+        }
+        .online-rules-content::-webkit-scrollbar-thumb {
+            background: #8b6914;
+            border-radius: 3px;
+        }
     </style>
 </head>
 <body>
@@ -543,6 +615,52 @@
                         <div id="your-color-display" style="margin: 10px 0;"></div>
                         <button class="diff-btn selected" onclick="playerReady()" style="width: 100%;">Ready to Play</button>
                         <div id="ready-status" style="color: #a89070; font-style: italic; margin-top: 8px;"></div>
+                    </div>
+                    <!-- Online Rules Accordion -->
+                    <button class="online-rules-toggle" onclick="toggleOnlineRules(this)">
+                        <span>📜 Game Rules</span>
+                        <span class="toggle-arrow">▼</span>
+                    </button>
+                    <div class="online-rules-content" id="online-rules-content">
+                        <div class="online-rules-inner">
+                            <div class="rule-item">
+                                <h4>🏆 Victory</h4>
+                                <p>Destroy the enemy <b>★ General</b> to win!</p>
+                            </div>
+                            <div class="rule-item">
+                                <h4>⚔ Units</h4>
+                                <p><b>♞ Knight:</b> 8 HP, 3 AP, 2+1 dmg</p>
+                                <p><b>🛡 Shieldman:</b> 6 HP, 2 AP, 1+1 dmg</p>
+                                <p><b>🏹 Longbowman:</b> 5 HP, 2 AP, 1-2 dmg</p>
+                            </div>
+                            <div class="rule-item">
+                                <h4>🎯 Actions</h4>
+                                <p><b>Move:</b> 1 AP per hex</p>
+                                <p><b>ZoC:</b> 2 AP to leave enemy zone</p>
+                                <p><b>Rotate:</b> 1 free, others 1 AP</p>
+                                <p><b>Attack:</b> Uses all AP</p>
+                                <p><b>Shoot:</b> 1 AP, up to 3 hexes</p>
+                            </div>
+                            <div class="rule-item">
+                                <h4>⚔ Combat</h4>
+                                <p><b>Attacker</b> strikes first</p>
+                                <p><b>Defender</b> counter-strikes (1 dmg)</p>
+                                <p><b>Backstab:</b> +1 dmg from behind</p>
+                                <p><b>Charge:</b> +1 dmg (cavalry on plains)</p>
+                            </div>
+                            <div class="rule-item">
+                                <h4>🔒 Combat Lock</h4>
+                                <p>After combat both units are locked</p>
+                                <p><b>Defend:</b> Strike first, disengage</p>
+                                <p><b>Counter:</b> Strike first (1 AP)</p>
+                                <p><b>Retreat:</b> Move away (1 AP, 1 HP)</p>
+                            </div>
+                            <div class="rule-item">
+                                <h4>🛡 Shieldman Special</h4>
+                                <p><b>Regroup:</b> Heal +1 HP (1 AP)</p>
+                                <p><b>Shield:</b> Block first arrow (1 AP)</p>
+                            </div>
+                        </div>
                     </div>
                 </div>
                 <div id="favourite-maps-section" class="favourite-maps-section" style="display:none;">
@@ -1663,6 +1781,13 @@
 
         // Store the online game version selected by host
         let onlineGameVersion = 'classic';
+
+        // Toggle online rules accordion
+        window.toggleOnlineRules = (btn) => {
+            btn.classList.toggle('expanded');
+            const content = document.getElementById('online-rules-content');
+            content.classList.toggle('expanded');
+        };
 
         window.createRoom = () => {
             // Get selected game version
@@ -4483,7 +4608,16 @@
                 const treeCount = (forestVar % 2 === 0) ? 5 : 4;
                 hillTrees.slice(0, treeCount).forEach(tp => drawConiferTree(tp));
             }
+            // Highland + forest - just forest trees (no hill bumps, highland is elevated plains)
+            else if (t.highland && t.forest) {
+                // Draw forest trees (same as regular forest)
+                const forestVar = t.forestVariant || 0;
+                const treePositions = forestVariants[forestVar % 3];
+                const treeCount = (forestVar % 2 === 0) ? 5 : 4;
+                treePositions.slice(0, treeCount).forEach(tp => drawBroadleafTree(tp));
+            }
             // Old map style hill only - rolling hills with hachures (3 variants)
+            // Hills block ALL line of sight
             else if (t.hill) {
                 const variant = t.hillVariant || 0;
                 const bumps = hillVariants[variant % 3];
@@ -4495,6 +4629,11 @@
                 ctx.beginPath();
                 ctx.ellipse(0, 0, size * 0.5, size * 0.3, 0, Math.PI * 1.15, Math.PI * 1.85);
                 ctx.stroke();
+            }
+            // Highland only - elevated plains (no terrain picture, looks like plain but elevated)
+            // Highland blocks LoS to lowland only (can shoot over to other elevated)
+            else if (t.highland) {
+                // No terrain drawing - highland looks like plains (empty hex)
             }
             // Old map style forest only - broad-leaved trees with variants
             else if (t.forest) {
@@ -4520,7 +4659,9 @@
             }
 
             // Terrain symbol indicator in upper left corner
-            // Circle = forest, Half-circle (bottom down) = hill, Triangle = hill+forest
+            // Circle = forest, Half-circle = hill (blocks all LoS),
+            // Half-circle with dot = highland (blocks LoS to lowland only)
+            // Triangle = hill+forest, Triangle with dot = highland+forest
             const symbolX = -size * 0.42;
             const symbolY = -size * 0.69;
             const symbolSize = size * 0.12;
@@ -4540,8 +4681,25 @@
                 ctx.stroke();
                 ctx.fill();
                 ctx.restore();
+            } else if (t.highland && t.forest) {
+                // Combined: empty half-circle (highland) + filled circle (forest)
+                ctx.save();
+                // Forest circle (filled)
+                ctx.fillStyle = 'rgba(80, 60, 40, 0.7)';
+                ctx.strokeStyle = 'rgba(255, 250, 240, 0.6)';
+                ctx.lineWidth = 1.5;
+                ctx.beginPath();
+                ctx.arc(symbolX + symbolSize * 0.5, symbolY, symbolSize * 0.5, 0, Math.PI * 2);
+                ctx.stroke();
+                ctx.fill();
+                // Highland half-circle (empty/outline)
+                ctx.strokeStyle = 'rgba(100, 75, 50, 0.7)';
+                ctx.beginPath();
+                ctx.arc(symbolX - symbolSize * 0.3, symbolY, symbolSize * 0.7, Math.PI, 0, false);
+                ctx.stroke();
+                ctx.restore();
             } else if (t.hill) {
-                // Half-circle with bottom down for hill
+                // Half-circle with bottom down for hill (blocks all LoS)
                 ctx.save();
                 ctx.fillStyle = 'rgba(80, 60, 40, 0.7)';
                 ctx.strokeStyle = 'rgba(255, 250, 240, 0.6)';
@@ -4551,6 +4709,15 @@
                 ctx.closePath();
                 ctx.stroke();
                 ctx.fill();
+                ctx.restore();
+            } else if (t.highland) {
+                // Empty half-circle for highland (outline only, not filled)
+                ctx.save();
+                ctx.strokeStyle = 'rgba(100, 75, 50, 0.7)';
+                ctx.lineWidth = 1.5;
+                ctx.beginPath();
+                ctx.arc(symbolX, symbolY, symbolSize, Math.PI, 0, false);
+                ctx.stroke();
                 ctx.restore();
             } else if (t.forest) {
                 // Circle for forest
@@ -5452,10 +5619,27 @@
         // ========== DEMO RULES INTEGRATION ==========
         // These functions use DemoRules when in Demo mode, otherwise return defaults
 
-        function getTerrainMovementCost(unitType, c, r) {
+        function getTerrainMovementCost(unitType, c, r, fromC, fromR) {
             if (gameVersion !== 'demo' || typeof DemoRules === 'undefined') return 1.0;
             const t = terrain.get(`${c},${r}`);
-            return DemoRules.getMovementCost(unitType, t);
+            let baseCost = DemoRules.getMovementCost(unitType, t);
+
+            // Elevation transition cost for highland
+            // Moving FROM lowland TO highland costs +1 AP
+            // Moving from elevated terrain (hill, highland) to highland has no extra cost
+            if (fromC !== undefined && fromR !== undefined) {
+                const toHighland = t && t.highland;
+                if (toHighland) {
+                    const fromT = terrain.get(`${fromC},${fromR}`);
+                    const fromElevated = fromT && (fromT.hill || fromT.highland);
+                    if (!fromElevated) {
+                        // Climbing up to highland from lowland costs +1 AP
+                        baseCost += 1.0;
+                    }
+                }
+            }
+
+            return baseCost;
         }
 
         function getTerrainDefenseBonus(c, r) {
@@ -5498,13 +5682,22 @@
                 return 1;
             }
 
-            // Archer on lowland shooting at elevated ground: -1 range
-            const shooterOnLowland = !shooterTerrain || !shooterTerrain.hill;
-            const targetOnHighGround = targetTerrain && targetTerrain.hill;
+            // Archer on lowland shooting at elevated ground (hill or highland): -1 range
+            const shooterOnLowland = !shooterTerrain || (!shooterTerrain.hill && !shooterTerrain.highland);
+            const targetOnHighGround = targetTerrain && (targetTerrain.hill || targetTerrain.highland);
 
             if (shooterOnLowland && targetOnHighGround) {
                 return baseRange - 1;
             }
+
+            // Archer on highland shooting at hill: -1 range (hills are higher than highland)
+            const shooterOnHighland = shooterTerrain && shooterTerrain.highland && !shooterTerrain.hill;
+            const targetOnHill = targetTerrain && targetTerrain.hill;
+
+            if (shooterOnHighland && targetOnHill) {
+                return baseRange - 1;
+            }
+
             return baseRange;
         }
 
@@ -5527,13 +5720,13 @@
             // In non-Demo modes, LOS is always clear
             if (gameVersion !== 'demo') return true;
 
-            // Check if shooter is on a hill (without forest)
+            // Check if shooter is on elevated terrain (hill or highland, without forest)
             const shooterTerrain = terrain.get(`${fromC},${fromR}`);
-            const shooterOnHill = shooterTerrain && shooterTerrain.hill && !shooterTerrain.forest;
+            const shooterOnHill = shooterTerrain && (shooterTerrain.hill || shooterTerrain.highland) && !shooterTerrain.forest;
 
-            // Check if target is on elevated terrain (hills or hill-forests)
+            // Check if target is on elevated terrain (hills, highland, or with forests)
             const targetTerrain = terrain.get(`${toC},${toR}`);
-            const targetElevated = targetTerrain && targetTerrain.hill;
+            const targetElevated = targetTerrain && (targetTerrain.hill || targetTerrain.highland);
 
             // Get hexes along the line between shooter and target
             const hexesInLine = getHexesInLine(fromC, fromR, toC, toR);
@@ -5544,15 +5737,19 @@
                 const t = terrain.get(`${hex.c},${hex.r}`);
 
                 if (t) {
-                    // Hill+forest blocks LOS to everything (forest on hill blocks view)
-                    if (t.hill && t.forest) {
+                    // Hill+forest or Highland+forest blocks LOS to everything
+                    if ((t.hill || t.highland) && t.forest) {
                         return false;
                     }
-                    // Plain hills block LOS to lowland only
-                    if (t.hill && !targetElevated) {
+                    // Hills (not highland) block LOS completely - cannot shoot over
+                    if (t.hill) {
                         return false;
                     }
-                    // Plain forests block LOS for non-hill shooters to lowland
+                    // Highland blocks LOS to lowland only (can shoot over to elevated targets)
+                    if (t.highland && !targetElevated) {
+                        return false;
+                    }
+                    // Plain forests block LOS for non-elevated shooters to lowland
                     if (t.forest && !shooterOnHill && !targetElevated) {
                         return false;
                     }
@@ -5659,20 +5856,21 @@
             return t && t.forest; // Both forest and hill-forest have forest=true
         }
 
-        // Check if observer can see target hex considering hill and forest LOS blocking
+        // Check if observer can see target hex considering hill/highland and forest LOS blocking
         // Rules:
-        // 1. Hills block LOS to lowland behind them, but not to other highlands
-        // 2. Forests block LOS to non-elevated terrain behind them (for non-hill observers)
-        // 3. Observers on clear hills can see over forests, but not through other hills to lowland
+        // 1. Hills block LOS completely (cannot see over)
+        // 2. Highland blocks LOS to lowland only (can see elevated targets over highland)
+        // 3. Forests block LOS to non-elevated terrain behind them (for non-elevated observers)
+        // 4. Observers on clear hills/highland can see over forests
         function hasVisibilityLOS(obsC, obsR, targetC, targetR) {
             if (gameVersion !== 'demo') return true;
 
             const obsTerrain = terrain.get(`${obsC},${obsR}`);
-            const observerOnHill = obsTerrain && obsTerrain.hill && !obsTerrain.forest;
+            const observerOnHill = obsTerrain && (obsTerrain.hill || obsTerrain.highland) && !obsTerrain.forest;
 
-            // Check if target is on elevated terrain (hills or hill-forests)
+            // Check if target is on elevated terrain (hills, highland, or their forests)
             const targetTerrain = terrain.get(`${targetC},${targetR}`);
-            const targetElevated = targetTerrain && targetTerrain.hill;
+            const targetElevated = targetTerrain && (targetTerrain.hill || targetTerrain.highland);
 
             // Get hexes along the line
             const hexesInLine = getHexesInLine(obsC, obsR, targetC, targetR);
@@ -5683,15 +5881,19 @@
                 const t = terrain.get(`${hex.c},${hex.r}`);
 
                 if (t) {
-                    // Hill+forest blocks LOS to everything (forest on hill blocks view)
-                    if (t.hill && t.forest) {
+                    // Hill+forest or Highland+forest blocks LOS to everything
+                    if ((t.hill || t.highland) && t.forest) {
                         return false;
                     }
-                    // Plain hills block LOS to lowland only
-                    if (t.hill && !targetElevated) {
+                    // Hills block LOS completely - cannot see over hills
+                    if (t.hill) {
                         return false;
                     }
-                    // Plain forests block LOS for non-hill observers to lowland
+                    // Highland blocks LOS to lowland only
+                    if (t.highland && !targetElevated) {
+                        return false;
+                    }
+                    // Plain forests block LOS for non-elevated observers to lowland
                     if (t.forest && !observerOnHill && !targetElevated) {
                         return false;
                     }
@@ -6068,7 +6270,13 @@
                     const hillHexes = selectDirectionalHillHexes(regionIdx, count);
                     hillHexes.forEach(hex => {
                         const key = `${hex.c},${hex.r}`;
-                        terrain.set(key, { hill: true, hillVariant: Math.floor(Math.random() * 3) });
+                        // 50% hills (blocks all LoS), 50% highland (blocks LoS to lowland only)
+                        const isHighland = Math.random() < 0.5;
+                        if (isHighland) {
+                            terrain.set(key, { highland: true, hillVariant: Math.floor(Math.random() * 3) });
+                        } else {
+                            terrain.set(key, { hill: true, hillVariant: Math.floor(Math.random() * 3) });
+                        }
                     });
                 }
                 else if (regionType === 'hillsForest') {
@@ -6080,13 +6288,19 @@
                         terrain.set(key, { forest: true, forestVariant: Math.floor(Math.random() * 3) });
                     });
 
-                    // Then define hills (can overlap with forests) - use directional selection
+                    // Then define hills/highland (can overlap with forests) - use directional selection
                     const hillCount = getHillTerrainCount();
                     const hillHexes = selectDirectionalHillHexes(regionIdx, hillCount);
                     hillHexes.forEach(hex => {
                         const key = `${hex.c},${hex.r}`;
                         const existing = terrain.get(key) || {};
-                        terrain.set(key, { ...existing, hill: true, hillVariant: Math.floor(Math.random() * 3) });
+                        // 50% hills, 50% highland
+                        const isHighland = Math.random() < 0.5;
+                        if (isHighland) {
+                            terrain.set(key, { ...existing, highland: true, hillVariant: Math.floor(Math.random() * 3) });
+                        } else {
+                            terrain.set(key, { ...existing, hill: true, hillVariant: Math.floor(Math.random() * 3) });
+                        }
                     });
                 }
             }
@@ -6129,17 +6343,35 @@
                     terrain.set(key, { forest: true, forestVariant: Math.floor(Math.random() * 3) });
                 }
                 else if (chosenType === 'hills') {
-                    terrain.set(key, { hill: true, hillVariant: Math.floor(Math.random() * 3) });
+                    // 50% hills, 50% highland
+                    const isHighland = Math.random() < 0.5;
+                    if (isHighland) {
+                        terrain.set(key, { highland: true, hillVariant: Math.floor(Math.random() * 3) });
+                    } else {
+                        terrain.set(key, { hill: true, hillVariant: Math.floor(Math.random() * 3) });
+                    }
                 }
                 else if (chosenType === 'hillsForest') {
-                    // Randomly choose forest, hill, or both
+                    // Randomly choose forest, hill/highland, or both
                     const subRoll = Math.random();
                     if (subRoll < 0.33) {
                         terrain.set(key, { forest: true, forestVariant: Math.floor(Math.random() * 3) });
                     } else if (subRoll < 0.66) {
-                        terrain.set(key, { hill: true, hillVariant: Math.floor(Math.random() * 3) });
+                        // 50% hills, 50% highland
+                        const isHighland = Math.random() < 0.5;
+                        if (isHighland) {
+                            terrain.set(key, { highland: true, hillVariant: Math.floor(Math.random() * 3) });
+                        } else {
+                            terrain.set(key, { hill: true, hillVariant: Math.floor(Math.random() * 3) });
+                        }
                     } else {
-                        terrain.set(key, { forest: true, hill: true, hillVariant: Math.floor(Math.random() * 3), forestVariant: Math.floor(Math.random() * 3) });
+                        // 50% hills+forest, 50% highland+forest
+                        const isHighland = Math.random() < 0.5;
+                        if (isHighland) {
+                            terrain.set(key, { forest: true, highland: true, hillVariant: Math.floor(Math.random() * 3), forestVariant: Math.floor(Math.random() * 3) });
+                        } else {
+                            terrain.set(key, { forest: true, hill: true, hillVariant: Math.floor(Math.random() * 3), forestVariant: Math.floor(Math.random() * 3) });
+                        }
                     }
                 }
                 // plains: leave empty
@@ -6150,14 +6382,14 @@
             const count = 1 + Math.floor(Math.random() * 3); // 1-3 lake hexes
             const lake = [];
 
-            // Find valid positions (plains hexes - no hill or forest, not on Classic starting positions)
+            // Find valid positions (plains hexes - no hill, highland or forest, not on Classic starting positions)
             const validHexes = getValidHexes();
             const available = validHexes.filter(h => {
                 const key = `${h.c},${h.r}`;
                 const t = terrain.get(key);
                 // Exclude Classic starting positions
                 const isStartingPos = CLASSIC_STARTING_POSITIONS.some(sp => sp.c === h.c && sp.r === h.r);
-                return !isStartingPos && (!t || (!t.hill && !t.forest));
+                return !isStartingPos && (!t || (!t.hill && !t.highland && !t.forest));
             });
 
             if (available.length === 0) return;
@@ -6644,7 +6876,8 @@
                         let key = `${n.c},${n.r}`;
                         if (grid.has(key) && grid.get(key).active && !pieces.some(p => p.c === n.c && p.r === n.r && p.hp > 0)) {
                             // Apply terrain movement cost modifier (Demo mode only)
-                            const terrainMultiplier = getTerrainMovementCost(unit.type, n.c, n.r);
+                            // Pass current position to check elevation transition cost
+                            const terrainMultiplier = getTerrainMovementCost(unit.type, n.c, n.r, curr.c, curr.r);
                             if (terrainMultiplier === Infinity) {
                                 continue; // Cannot enter this terrain (e.g., lake)
                             }
@@ -7879,7 +8112,10 @@
                         for (let n of neighbors) {
                             const key = `${n.c},${n.r}`;
                             if (reachableHexes.has(key)) {
-                                const neighborCost = reachableHexes.get(key).cost;
+                                const entry = reachableHexes.get(key);
+                                const neighborCost = entry.cost;
+                                // Skip castle swap hexes - can't attack through castle
+                                if (entry.isSwap) continue;
                                 // Check if we have enough AP for move + terrain-based attack
                                 if (draggedPiece.ap - neighborCost >= attackCost) {
                                     draggedPiece.c = n.c; draggedPiece.r = n.r; draggedPiece.ap -= neighborCost;
@@ -9018,7 +9254,9 @@
                     // Old map style - warm, pale parchment tones
                     if (t.lake) { col = "#d8dce0"; str = "#a8b0b4"; } // Pale warm blue
                     else if (t.hill && t.forest) { col = "#d8d2b8"; str = "#a89e7c"; } // Blend of hill brown and forest green
-                    else if (t.hill) { col = "#d4c4a0"; str = "#a08860"; } // More visible brown
+                    else if (t.highland && t.forest) { col = "#dcd6bc"; str = "#aca280"; } // Highland+forest: slightly warmer
+                    else if (t.hill) { col = "#d4c4a0"; str = "#a08860"; } // Hill: brown (blocks all LoS)
+                    else if (t.highland) { col = "#d8c8a8"; str = "#a89068"; } // Highland: warmer brown (blocks LoS to lowland)
                     else if (t.forest) { col = "#dce0d0"; str = "#b0b498"; } // Warm pale green
                 }
 
